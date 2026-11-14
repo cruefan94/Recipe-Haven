@@ -1,0 +1,100 @@
+name: Import Recipe Haven source and build Android test APKs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-and-verify:
+    if: github.repository == 'cruefan94/Recipe-Haven'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Recipe Haven
+        uses: actions/checkout@v4
+      - name: Unpack source checkpoint
+        if: hashFiles('source/recipe-haven-source.b85') != ''
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path, PurePosixPath
+          from io import BytesIO
+          import base64, tarfile
+          blob = Path('source/recipe-haven-source.b85')
+          compressed = base64.b85decode(blob.read_bytes())
+          with tarfile.open(fileobj=BytesIO(compressed), mode='r:xz') as archive:
+              for member in archive:
+                  relative = PurePosixPath(member.name)
+                  if member.isdir():
+                      continue
+                  if not member.isfile() or relative.is_absolute() or '..' in relative.parts:
+                      raise SystemExit('Unexpected source archive path')
+                  if relative.parts[0] == '.git' or member.issym() or member.islnk():
+                      raise SystemExit('Unsafe archive entry')
+                  target = Path(*relative.parts)
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  data = archive.extractfile(member)
+                  if data is None:
+                      raise SystemExit('Missing archive member')
+                  target.write_bytes(data.read())
+          blob.unlink()
+          print('Source safely expanded into browsable project files.')
+          PY
+      - name: Commit source tree to repository
+        if: hashFiles('pubspec.yaml') != ''
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Expand Recipe Haven source into browsable project"
+            git push origin HEAD:main
+          fi
+      - name: Java 17
+        if: hashFiles('pubspec.yaml') != ''
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Flutter stable
+        if: hashFiles('pubspec.yaml') != ''
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Fetch project dependencies
+        if: hashFiles('pubspec.yaml') != ''
+        run: flutter pub get
+      - name: Generate Android editions
+        if: hashFiles('pubspec.yaml') != ''
+        run: bash scripts/bootstrap_android.sh
+      - name: Flutter analyzer
+        if: hashFiles('pubspec.yaml') != ''
+        run: flutter analyze
+      - name: Flutter tests
+        if: hashFiles('pubspec.yaml') != ''
+        run: flutter test
+      - name: Build Mom and Dad Android test APK
+        if: hashFiles('pubspec.yaml') != ''
+        run: flutter build apk --debug --flavor momdad --dart-define=EDITION=momdad
+      - name: Build Babe Android test APK
+        if: hashFiles('pubspec.yaml') != ''
+        run: flutter build apk --debug --flavor babe --dart-define=EDITION=babe
+      - name: Package Android test APKs
+        if: hashFiles('pubspec.yaml') != ''
+        run: |
+          mkdir -p release-test
+          cp build/app/outputs/flutter-apk/app-momdad-debug.apk release-test/For-Mom-and-Dad-Android-TEST.apk
+          cp build/app/outputs/flutter-apk/app-babe-debug.apk release-test/Babe-Android-TEST.apk
+      - name: Upload both debug-signed APKs
+        if: hashFiles('pubspec.yaml') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: RecipeHaven-Android-TEST-APKs
+          path: release-test/*.apk
+          retention-days: 30
