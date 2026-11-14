@@ -9,6 +9,7 @@ import '../widgets/recipe_card.dart';
 import 'recipe_detail_screen.dart';
 import 'ingredient_finder_screen.dart';
 import 'ingredient_alternatives_screen.dart';
+import '../services/incoming_recipe_share.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.cookbook});
@@ -28,6 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _fileTransferBusy = false;
   String _prefillAlternatives = '';
   String _prefillFinder = '';
+  String _sharedRecipeUrl = '';
+  int _shareSerial = 0;
   List<Recipe> _results = const [];
   List<String> _failed = const [];
   String _searched = '';
@@ -38,6 +41,24 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     widget.cookbook.addListener(_refresh);
+    IncomingRecipeShare.instance.addListener(_receiveSharedLink);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _receiveSharedLink();
+    });
+  }
+
+  void _receiveSharedLink() {
+    if (!mounted) return;
+    final url = IncomingRecipeShare.instance.takePendingUrl();
+    if (url == null) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _newRecipeCollection = RecipeCollection.general;
+      _sharedRecipeUrl = url;
+      _shareSerial++;
+      _page = 3; // Let the user review and choose a collection before saving.
+    });
+    _notice('Link received from Android Share. Review it, then tap Save.');
   }
 
   void _refresh() { if (mounted) setState(() {}); }
@@ -50,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _marijuanaFilter.dispose();
     _api.dispose();
     widget.cookbook.removeListener(_refresh);
+    IncomingRecipeShare.instance.removeListener(_receiveSharedLink);
     super.dispose();
   }
 
@@ -97,7 +119,11 @@ class _HomeScreenState extends State<HomeScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       // Add Recipe reached from the dashboard defaults to the regular cookbook.
-      if (page == 3) _newRecipeCollection = RecipeCollection.general;
+      if (page == 3) {
+        _newRecipeCollection = RecipeCollection.general;
+        _sharedRecipeUrl = '';
+        _shareSerial++;
+      }
       _page = page;
     });
   }
@@ -209,8 +235,9 @@ class _HomeScreenState extends State<HomeScreen> {
           _discover(),
           _cookbook(collection: RecipeCollection.general),
           AddRecipeScreen(
-            key: ValueKey(_newRecipeCollection),
+            key: ValueKey(_newRecipeCollection + ':' + _shareSerial.toString()),
             cookbook: widget.cookbook,
+            initialUrl: _sharedRecipeUrl,
             initialCollection: _newRecipeCollection,
             onAdded: (collection) {
               setState(() => _page = collection == RecipeCollection.marijuana ? 4 : 2);
@@ -530,10 +557,12 @@ class AddRecipeScreen extends StatefulWidget {
   const AddRecipeScreen({
     super.key, required this.cookbook, required this.onAdded,
     this.initialCollection = RecipeCollection.general,
+    this.initialUrl = '',
   });
   final CookbookStore cookbook;
   final ValueChanged<String> onAdded;
   final String initialCollection;
+  final String initialUrl;
 
   @override
   State<AddRecipeScreen> createState() => _AddRecipeScreenState();
@@ -551,6 +580,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     super.initState();
     _collection = widget.initialCollection == RecipeCollection.marijuana
         ? RecipeCollection.marijuana : RecipeCollection.general;
+    _url.text = widget.initialUrl;
   }
   @override void dispose() { _url.dispose(); _title.dispose(); _ingredients.dispose(); _instructions.dispose(); super.dispose(); }
 
