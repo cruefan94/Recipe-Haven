@@ -37,5 +37,19 @@ def set_bundle(match):
 text = pattern.sub(set_bundle, text)
 if found == 0:
     raise SystemExit('Unknown Xcode project template: missing PRODUCT_BUNDLE_IDENTIFIER.')
+# file_picker v13 requires iOS 14+. Align the app and CocoaPods targets.
+text = re.sub(r'(IPHONEOS_DEPLOYMENT_TARGET\\s*=\\s*)[0-9.]+(;)',
+              r'\\g<1>14.0\\2', text)
 pbx_path.write_text(text)
-print('iOS: For Mom and Dad, stable bundle ID, foreground-only location permission.')
+
+podfile = root / 'ios/Podfile'
+if podfile.exists():
+    content = podfile.read_text()
+    pattern_ios = re.compile(r"(?m)^\\s*#?\\s*platform\\s+:ios,\\s*['\\\"][0-9.]+['\\\"]\\s*$")
+    if pattern_ios.search(content):
+        content = pattern_ios.sub("platform :ios, '14.0'", content, count=1)
+    else:
+        content = "platform :ios, '14.0'\\n" + content
+    podfile.write_text(content)
+
+print('iOS: For Mom and Dad, iOS 14 minimum, stable bundle ID, foreground-only location permission.')

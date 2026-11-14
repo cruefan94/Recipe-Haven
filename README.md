@@ -86,3 +86,10 @@ On the source branch `feature/ingredient-products-and-cookbook-backup`, **Backup
 ### Portable file backups — development branch
 
 Android and iOS now have source-level support for a system-native **Save cookbook to JSON file** action and **Import cookbook from JSON file** action. Both collections are included. Import uses the existing validated merge behavior, preserving recipes already saved on the device. The file-picker dependency is `file_picker ^13.3.3` (iOS 14+). Existing clipboard transfer remains as a fallback. The feature has not been compiled or device-tested at the user's request.
+
+
+### Recipe discovery expansion — source branch
+
+Recipe details can now attempt **Import ingredients & steps** from a website when a search result was link-only; the original URL remains accessible if the website does not provide structured recipe metadata. Previously saved link-only recipes are updated in place when an import succeeds, while unsaved results require the user to tap Save. The search screen also offers browser-based recipe search shortcuts for Allrecipes, Food Network, BBC Good Food, Taste of Home, and Serious Eats. These are **external browser searches**, not additional in-app indexed recipes. All changes remain **untested and uncompiled**, per request.
+
+The iOS Mom and Dad bootstrap now targets iOS **14.0+**, matching the file-picker plugin requirement; this affects no Babe edition iOS build because Babe is Android-only.
