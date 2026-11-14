@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/recipe.dart';
 import '../services/cookbook_store.dart';
+import '../services/recipe_import_service.dart';
 
 Future<void> openExternalUrl(String raw, BuildContext context) async {
   final uri = Uri.tryParse(raw);
@@ -28,15 +29,22 @@ class RecipeDetailScreen extends StatefulWidget {
 
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   final Set<int> _checked = {};
-  @override void initState() { super.initState(); widget.cookbook.addListener(_update); }
+  late Recipe _displayRecipe;
+  bool _importBusy = false;
+
+  @override void initState() {
+    super.initState();
+    _displayRecipe = widget.recipe;
+    widget.cookbook.addListener(_update);
+  }
   @override void dispose() { widget.cookbook.removeListener(_update); super.dispose(); }
   void _update() { if (mounted) setState(() {}); }
 
   Future<void> _save() async {
-    final saved = widget.cookbook.contains(widget.recipe.id);
+    final saved = widget.cookbook.contains(_displayRecipe.id);
     try {
-      if (saved) { await widget.cookbook.remove(widget.recipe.id); }
-      else { await widget.cookbook.save(widget.recipe); }
+      if (saved) { await widget.cookbook.remove(_displayRecipe.id); }
+      else { await widget.cookbook.save(_displayRecipe); }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(saved ? 'Removed from cookbook' : 'Saved to your cookbook')));
@@ -48,8 +56,53 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     }
   }
 
+  Future<void> _importFromSource() async {
+    final current = _displayRecipe;
+    if (_importBusy || current.sourceUrl.isEmpty) return;
+    setState(() => _importBusy = true);
+    try {
+      final parsed = await RecipeImportService().importUrl(current.sourceUrl);
+      if (!mounted) return;
+      if (!parsed.hasInstructions) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('This website did not expose recipe instructions. Use Open original recipe.'),
+        ));
+        return;
+      }
+      final enriched = parsed.copyWith(
+        id: current.id,
+        collection: current.collection,
+      );
+      // Replace the same saved recipe only when the user already saved it.
+      // Otherwise let the user review the imported ingredients before saving.
+      if (widget.cookbook.contains(current.id)) {
+        await widget.cookbook.save(enriched);
+      }
+      if (!mounted) return;
+      setState(() {
+        _displayRecipe = enriched;
+        _checked.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(widget.cookbook.contains(current.id)
+          ? 'Ingredients and instructions updated in your cookbook.'
+          : 'Recipe loaded! Tap Save to keep it offline.'),
+      ));
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message.toString())));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not import the recipe. The original website link is still available.'),
+      ));
+    } finally {
+      if (mounted) setState(() => _importBusy = false);
+    }
+  }
+
   @override Widget build(BuildContext context) {
-    final recipe = widget.recipe;
+    final recipe = _displayRecipe;
     final saved = widget.cookbook.contains(recipe.id);
     final theme = Theme.of(context);
     final cookbookName = recipe.collection == RecipeCollection.marijuana ? 'Marijuana Cookbook' : 'My Cookbook';
@@ -77,6 +130,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           label: Text(saved ? 'Saved to $cookbookName' : 'Save to $cookbookName')),
         if (recipe.sourceUrl.isNotEmpty) ...[
           const SizedBox(height: 8),
+          if (recipe.linkOnly || !recipe.hasInstructions) ...[
+            FilledButton.tonalIcon(
+              onPressed: _importBusy ? null : _importFromSource,
+              icon: _importBusy
+                ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.download_rounded),
+              label: Text(_importBusy ? 'Importing recipe…' : 'Import ingredients & steps'),
+            ),
+            const SizedBox(height: 8),
+            const Text('Import works when the website publishes structured recipe data. '
+              'Some sites provide a link only.'),
+          ],
           OutlinedButton.icon(onPressed: () => openExternalUrl(recipe.sourceUrl, context),
             icon: const Icon(Icons.open_in_new), label: const Text('Open original recipe')),
         ],
