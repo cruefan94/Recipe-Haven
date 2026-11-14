@@ -2,8 +2,25 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 
-/// No product inventory or price claim is made from a map listing.
-/// Google Places can be enabled through a separate, server-side worker.
+/// Product information must come from a retailer-authorized catalogue,
+/// never inferred from a Google Maps or OpenStreetMap business listing.
+class IngredientProduct {
+  const IngredientProduct({
+    required this.name, this.size = '', this.price = '',
+    this.currency = '', this.availability = '', this.productUrl,
+    this.updatedAt = '',
+  });
+  final String name;
+  final String size;
+  final String price;
+  final String currency;
+  final String availability;
+  final Uri? productUrl;
+  final String updatedAt;
+  String get priceLabel => price.isEmpty ? 'Price not available'
+      : currency.isEmpty ? price : '$currency $price';
+}
+
 class NearbyStore {
   const NearbyStore({
     required this.id,
@@ -15,6 +32,7 @@ class NearbyStore {
     this.website,
     this.googleMapsUrl,
     this.category = 'Food store',
+    this.products = const [],
   });
   final String id;
   final String name;
@@ -25,6 +43,7 @@ class NearbyStore {
   final Uri? website;
   final String? googleMapsUrl;
   final String category;
+  final List<IngredientProduct> products;
 }
 
 class NearbyStoreResults {
@@ -40,13 +59,13 @@ class StoreLocator {
   static const String _workerUrl = String.fromEnvironment('STORE_LOOKUP_URL');
 
   /// Only called after the user presses Find Nearby Stores and grants location.
-  Future<NearbyStoreResults> nearby(double latitude, double longitude) async {
+  Future<NearbyStoreResults> nearby(double latitude, double longitude, {String ingredient = ''}) async {
     if (!latitude.isFinite || !longitude.isFinite || latitude.abs() > 90 || longitude.abs() > 180) {
       throw const FormatException('Invalid device coordinates');
     }
     if (_workerUrl.isNotEmpty) {
       try {
-        return await _googleWorker(latitude, longitude);
+        return await _googleWorker(latitude, longitude, ingredient.trim());
       } catch (_) {
         // A provider outage should not prevent a basic community-map search.
       }
@@ -54,7 +73,7 @@ class StoreLocator {
     return _openStreetMap(latitude, longitude);
   }
 
-  Future<NearbyStoreResults> _googleWorker(double lat, double lon) async {
+  Future<NearbyStoreResults> _googleWorker(double lat, double lon, String ingredient) async {
     final origin = Uri.tryParse(_workerUrl);
     if (origin == null || origin.scheme != 'https' || origin.host.isEmpty) {
       throw const FormatException('STORE_LOOKUP_URL must be an HTTPS endpoint');
@@ -62,6 +81,7 @@ class StoreLocator {
     final uri = origin.replace(queryParameters: {
       ...origin.queryParameters,
       'lat': '$lat', 'lon': '$lon', 'radius': '30000',
+      'ingredient': ingredient.length > 120 ? ingredient.substring(0, 120) : ingredient,
     });
     final response = await _client.get(uri).timeout(const Duration(seconds: 16));
     if (response.statusCode != 200) throw StateError('Store service unavailable');
@@ -84,10 +104,44 @@ class StoreLocator {
         website: safeWebsite(item['website'] as String?),
         googleMapsUrl: item['mapsUrl'] as String?,
         category: 'Store',
+        products: _productsFromCatalog(item['products']),
       ));
     }
     stores.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
     return NearbyStoreResults(stores: stores, provider: 'Google Places');
+  }
+
+  /// Optional worker product fields; missing price or stock stays unknown.
+  List<IngredientProduct> _productsFromCatalog(dynamic input) {
+    if (input is! List) return const [];
+    final output = <IngredientProduct>[];
+    for (final raw in input.take(15)) {
+      if (raw is! Map) continue;
+      final data = Map<String, dynamic>.from(raw);
+      String field(String key, [int maxLength = 160]) {
+        final rawValue = data[key];
+        final value = rawValue is String ? rawValue.trim() : '';
+        return value.length > maxLength ? value.substring(0, maxLength) : value;
+      }
+      final name = field('name');
+      if (name.isEmpty) continue;
+      final listed = data['price'];
+      final price = listed is num ? listed.toStringAsFixed(2) : field('price', 32);
+      final status = switch (field('availability', 30).toLowerCase()) {
+        'in_stock' => 'In stock according to retailer',
+        'out_of_stock' => 'Out of stock according to retailer',
+        'limited' => 'Limited stock according to retailer',
+        _ => '',
+      };
+      output.add(IngredientProduct(
+        name: name, size: field('size', 80), price: price,
+        currency: field('currency', 8).toUpperCase(),
+        availability: status,
+        productUrl: safeWebsite(field('productUrl', 1000)),
+        updatedAt: field('updatedAt', 40),
+      ));
+    }
+    return output;
   }
 
   Future<NearbyStoreResults> _openStreetMap(double lat, double lon) async {

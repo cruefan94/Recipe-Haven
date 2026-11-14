@@ -55,7 +55,8 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
     setState(() { _busy = true; _error = null; _found = null; });
     try {
       final position = await _getPosition();
-      final results = await _locator.nearby(position.latitude, position.longitude);
+      final results = await _locator.nearby(position.latitude, position.longitude,
+        ingredient: _ingredient.text.trim());
       if (!mounted) return;
       setState(() { _position = position; _found = results; });
     } catch (e) {
@@ -117,7 +118,7 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
       Text('Location is requested only when you search. Your current coordinates are sent to a store-directory provider to locate nearby businesses. No background tracking.',
         style: Theme.of(context).textTheme.bodySmall),
       const SizedBox(height: 8),
-      Text('Store listings do not confirm that an ingredient is in stock. Check the retailer website for product size, price and availability; not all stores publish this information.',
+      Text('Google Maps locates stores, not products. Sizes, prices and stock appear only if a connected retailer feed supplies them. Check the store before visiting.',
         style: Theme.of(context).textTheme.bodySmall),
       if (_error != null) ...[
         const SizedBox(height: 12),
@@ -145,8 +146,30 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
               Text('${store.distanceKm.toStringAsFixed(1)} km away · ${store.category}'),
               if (store.address.isNotEmpty) Text(store.address),
               const SizedBox(height: 7),
-              const Text('Item size / price: check retailer listing (not verified)',
-                style: TextStyle(fontSize: 12)),
+              if (store.products.isEmpty)
+                const Text('Product size and price not available from this directory. Check the retailer.',
+                  style: TextStyle(fontSize: 12))
+              else ...[
+                const Text('Retailer catalogue listings',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                ...store.products.map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    if (item.size.isNotEmpty) Text('Size: ${item.size}'),
+                    Text(item.priceLabel),
+                    if (item.availability.isNotEmpty) Text(item.availability),
+                    if (item.updatedAt.isNotEmpty) Text('Listing updated: ${item.updatedAt}'),
+                    if (item.productUrl != null)
+                      TextButton.icon(
+                        onPressed: () => openExternalUrl(item.productUrl.toString(), context),
+                        icon: const Icon(Icons.open_in_new, size: 18),
+                        label: const Text('View retailer product'),
+                      ),
+                  ]),
+                )),
+              ],
               const SizedBox(height: 10),
               Wrap(spacing: 8, runSpacing: 5, children: [
                 OutlinedButton.icon(
