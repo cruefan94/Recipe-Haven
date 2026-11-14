@@ -3,21 +3,24 @@ import 'package:flutter/material.dart';
 import 'config/edition.dart';
 import 'screens/home_screen.dart';
 import 'services/cookbook_store.dart';
+import 'services/shopping_list_store.dart';
 import 'services/incoming_recipe_share.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final edition = EditionConfig.resolve(platform: defaultTargetPlatform);
   final cookbook = await CookbookStore.load();
+  final shopping = await ShoppingListStore.load();
   // A shared browser link is queued until the user opens Add Recipe.
   // iOS ignores this Android-only bridge.
   await IncomingRecipeShare.instance.initialize();
-  runApp(RecipeHavenApp(cookbook: cookbook, edition: edition));
+  runApp(RecipeHavenApp(cookbook: cookbook, shopping: shopping, edition: edition));
 }
 
 class RecipeHavenApp extends StatelessWidget {
-  const RecipeHavenApp({super.key, required this.cookbook, required this.edition});
+  const RecipeHavenApp({super.key, required this.cookbook, required this.shopping, required this.edition});
   final CookbookStore cookbook;
+  final ShoppingListStore shopping;
   final EditionConfig edition;
 
   @override
@@ -38,7 +41,7 @@ class RecipeHavenApp extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
-      home: RecipeHavenWelcomeScreen(cookbook: cookbook, edition: edition),
+      home: RecipeHavenWelcomeScreen(cookbook: cookbook, shopping: shopping, edition: edition),
     );
   }
 }
@@ -46,9 +49,10 @@ class RecipeHavenApp extends StatelessWidget {
 /// Both versions have their own title screen but share every cooking feature.
 class RecipeHavenWelcomeScreen extends StatelessWidget {
   const RecipeHavenWelcomeScreen({
-    super.key, required this.cookbook, required this.edition,
+    super.key, required this.cookbook, required this.shopping, required this.edition,
   });
   final CookbookStore cookbook;
+  final ShoppingListStore shopping;
   final EditionConfig edition;
 
   @override
@@ -74,7 +78,7 @@ class RecipeHavenWelcomeScreen extends StatelessWidget {
               const SizedBox(height: 40),
               FilledButton.icon(
                 onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute<void>(
-                  builder: (_) => HomeScreen(cookbook: cookbook),
+                  builder: (_) => HomeScreen(cookbook: cookbook, shopping: shopping),
                 )),
                 icon: Icon(edition.isBabe ? Icons.favorite_outline : Icons.restaurant_menu),
                 label: const Text('Start cooking'),

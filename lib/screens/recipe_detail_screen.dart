@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/recipe.dart';
 import '../services/cookbook_store.dart';
+import '../services/shopping_list_store.dart';
 import '../services/recipe_import_service.dart';
 import 'ingredient_alternatives_screen.dart';
 
@@ -22,9 +23,10 @@ Future<void> openExternalUrl(String raw, BuildContext context) async {
 }
 
 class RecipeDetailScreen extends StatefulWidget {
-  const RecipeDetailScreen({super.key, required this.recipe, required this.cookbook});
+  const RecipeDetailScreen({super.key, required this.recipe, required this.cookbook, required this.shopping});
   final Recipe recipe;
   final CookbookStore cookbook;
+  final ShoppingListStore shopping;
   @override State<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
 }
 
@@ -53,6 +55,26 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not update cookbook.')));
+      }
+    }
+  }
+
+  Future<void> _addIngredientsToShopping() async {
+    final recipe = _displayRecipe;
+    if (recipe.ingredients.isEmpty) return;
+    try {
+      final count = await widget.shopping.addRecipeIngredients(recipe);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(count == 0
+            ? 'These ingredients are already on your shopping list.'
+            : 'Added ' + count.toString() + ' ingredients to your shopping list.'),
+      ));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not add shopping ingredients. Please try again.'),
+        ));
       }
     }
   }
@@ -150,6 +172,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           const SizedBox(height: 24),
           Text('Ingredients', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
           const Text('Tick off items as you cook'),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _addIngredientsToShopping,
+            icon: const Icon(Icons.add_shopping_cart_outlined),
+            label: const Text('Add ingredients to shopping list'),
+          ),
           const SizedBox(height: 8),
           ...recipe.ingredients.asMap().entries.map((item) => CheckboxListTile(
             value: _checked.contains(item.key), controlAffinity: ListTileControlAffinity.leading,

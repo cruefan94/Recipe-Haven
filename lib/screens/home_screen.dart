@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../services/cookbook_file_service.dart';
 import '../models/recipe.dart';
 import '../services/cookbook_store.dart';
+import '../services/shopping_list_store.dart';
 import '../services/recipe_import_service.dart';
 import '../services/recipe_search_service.dart';
 import '../widgets/recipe_card.dart';
@@ -10,11 +11,13 @@ import 'recipe_detail_screen.dart';
 import 'ingredient_finder_screen.dart';
 import 'ingredient_alternatives_screen.dart';
 import 'pantry_cooking_screen.dart';
+import 'shopping_list_screen.dart';
 import '../services/incoming_recipe_share.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.cookbook});
+  const HomeScreen({super.key, required this.cookbook, required this.shopping});
   final CookbookStore cookbook;
+  final ShoppingListStore shopping;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -42,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     widget.cookbook.addListener(_refresh);
+    widget.shopping.addListener(_refresh);
     IncomingRecipeShare.instance.addListener(_receiveSharedLink);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _receiveSharedLink();
@@ -72,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _marijuanaFilter.dispose();
     _api.dispose();
     widget.cookbook.removeListener(_refresh);
+    widget.shopping.removeListener(_refresh);
     IncomingRecipeShare.instance.removeListener(_receiveSharedLink);
     super.dispose();
   }
@@ -114,7 +119,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _open(Recipe recipe) => Navigator.push(context, MaterialPageRoute<void>(builder: (_) =>
-    RecipeDetailScreen(recipe: recipe, cookbook: widget.cookbook)));
+    RecipeDetailScreen(recipe: recipe, cookbook: widget.cookbook,
+      shopping: widget.shopping)));
 
   void _navigate(int page) {
     FocusManager.instance.primaryFocus?.unfocus();
@@ -150,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final entries = <({String title, String subtitle, IconData icon, int page})>[
       (title: 'Find Recipes', subtitle: 'Search and compare versions of your favourite dishes.', icon: Icons.search_rounded, page: 1),
       (title: 'My Cookbook', subtitle: 'Read your saved recipes, including offline instructions.', icon: Icons.bookmark_rounded, page: 2),
+      (title: 'Shopping List', subtitle: widget.shopping.toBuyCount.toString() + ' groceries still to buy. Add recipe ingredients in one tap.', icon: Icons.shopping_cart_outlined, page: 9),
       (title: 'Add Recipe', subtitle: 'Import a recipe link or write down a family favourite.', icon: Icons.add_circle_outline_rounded, page: 3),
       (title: 'Marijuana Cookbook', subtitle: 'Keep adult-use recipes in a separate collection.', icon: Icons.local_florist_rounded, page: 4),
       (title: 'Find Ingredient', subtitle: 'Find grocery stores within 30 km and open product searches.', icon: Icons.shopping_basket_rounded, page: 5),
@@ -212,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const pages = [
       'Kitchen Home', 'Find Recipes', 'My Cookbook', 'Add Recipe',
       'Marijuana Cookbook', 'Find Ingredient', 'Backup & Restore',
-      'Ingredient Alternatives', 'Cook With What I Have',
+      'Ingredient Alternatives', 'Cook With What I Have', 'Shopping List',
     ];
     return PopScope(
       canPop: _page == 0,
@@ -258,7 +265,12 @@ class _HomeScreenState extends State<HomeScreen> {
             initialIngredient: _prefillAlternatives,
             onFindNearby: _findStoresFor,
           ),
-          PantryCookingScreen(cookbook: widget.cookbook),
+          PantryCookingScreen(cookbook: widget.cookbook, shopping: widget.shopping),
+          ShoppingListScreen(
+            shopping: widget.shopping,
+            onFindNearby: _findStoresFor,
+            onFindAlternative: _findAlternativesFor,
+          ),
         ])),
       ),
     );

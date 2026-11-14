@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
 import '../services/cookbook_store.dart';
+import '../services/shopping_list_store.dart';
 import '../services/recipe_search_service.dart';
 import '../widgets/recipe_card.dart';
 import 'recipe_detail_screen.dart';
@@ -9,9 +10,10 @@ import 'recipe_detail_screen.dart';
 /// Online results are a limited TheMealDB sample, not an exhaustive pantry
 /// filter or a guarantee that every required ingredient is available.
 class PantryCookingScreen extends StatefulWidget {
-  const PantryCookingScreen({super.key, required this.cookbook});
+  const PantryCookingScreen({super.key, required this.cookbook, required this.shopping});
 
   final CookbookStore cookbook;
+  final ShoppingListStore shopping;
 
   @override
   State<PantryCookingScreen> createState() => _PantryCookingScreenState();
@@ -123,6 +125,7 @@ class _PantryCookingScreenState extends State<PantryCookingScreen> {
       builder: (_) => RecipeDetailScreen(
         recipe: recipe,
         cookbook: widget.cookbook,
+        shopping: widget.shopping,
       ),
     ),
   );
