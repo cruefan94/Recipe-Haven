@@ -9,6 +9,7 @@ import '../widgets/recipe_card.dart';
 import 'recipe_detail_screen.dart';
 import 'ingredient_finder_screen.dart';
 import 'ingredient_alternatives_screen.dart';
+import 'pantry_cooking_screen.dart';
 import '../services/incoming_recipe_share.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -153,6 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
       (title: 'Marijuana Cookbook', subtitle: 'Keep adult-use recipes in a separate collection.', icon: Icons.local_florist_rounded, page: 4),
       (title: 'Find Ingredient', subtitle: 'Find grocery stores within 30 km and open product searches.', icon: Icons.shopping_basket_rounded, page: 5),
       (title: 'Ingredient Alternatives', subtitle: 'Out of something? See substitute amounts and best uses, even offline.', icon: Icons.swap_horiz_rounded, page: 7),
+      (title: 'Cook With What I Have', subtitle: 'Enter ingredients in your kitchen and find matching meal ideas.', icon: Icons.kitchen_outlined, page: 8),
       (title: 'Backup & Restore', subtitle: 'Make a copy of all saved recipes or restore a previous cookbook.', icon: Icons.settings_backup_restore_rounded, page: 6),
     ];
     return ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 28), children: [
@@ -210,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const pages = [
       'Kitchen Home', 'Find Recipes', 'My Cookbook', 'Add Recipe',
       'Marijuana Cookbook', 'Find Ingredient', 'Backup & Restore',
-      'Ingredient Alternatives',
+      'Ingredient Alternatives', 'Cook With What I Have',
     ];
     return PopScope(
       canPop: _page == 0,
@@ -256,6 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
             initialIngredient: _prefillAlternatives,
             onFindNearby: _findStoresFor,
           ),
+          PantryCookingScreen(cookbook: widget.cookbook),
         ])),
       ),
     );
