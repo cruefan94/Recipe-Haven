@@ -411,10 +411,10 @@ class _HomeScreenState extends State<HomeScreen> {
         label: const Text('Restore from clipboard'),
       ),
       const SizedBox(height: 18),
-      const Text('Recommended: save a JSON file and move it to your other phone '
-        'using Files, cloud storage or a private message. On the other phone, choose '
-        'Import cookbook from JSON file. Clipboard remains available for small transfers. '
-        'The JSON file includes any personally saved recipes and should not be shared publicly.'),
+      const Text('Recommended: save the cookbook JSON file and move it privately to '
+        'your other device. The JSON backup currently covers saved recipes, NOT your '
+        'separate shopping list. To keep grocery items before switching phones, '
+        'open Shopping List and use Copy to share. Neither copy should be posted publicly.'),
     ],
   );
 

@@ -70,6 +70,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     }
     await _action(() async {
       await widget.shopping.addManual(text);
+      if (!mounted) return;
       _newItem.clear();
       FocusManager.instance.primaryFocus?.unfocus();
       _message('Item added to shopping list.');
@@ -77,7 +78,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   }
 
   Future<void> _clearBought() async {
-    if (_busy || widget.shopping.checkedCount == 0) return;
+    if (_busy || widget.shopping.readFailure || widget.shopping.checkedCount == 0) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
@@ -138,7 +139,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
             Row(children: [
               Checkbox(
                 value: item.checked,
-                onChanged: _busy ? null : (checked) => _action(() =>
+                onChanged: _busy || widget.shopping.readFailure ? null : (checked) => _action(() =>
                     widget.shopping.setChecked(item.id, checked ?? false)),
               ),
               Expanded(child: Column(
@@ -158,7 +159,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               IconButton(
                 icon: const Icon(Icons.delete_outline),
                 tooltip: 'Remove shopping item',
-                onPressed: _busy ? null : () => _action(() =>
+                onPressed: _busy || widget.shopping.readFailure ? null : () => _action(() =>
                     widget.shopping.remove(item.id)),
               ),
             ]),
@@ -220,7 +221,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
             prefixIcon: const Icon(Icons.add_shopping_cart),
             suffixIcon: IconButton(
               tooltip: 'Add item',
-              onPressed: _busy ? null : _add,
+              onPressed: _busy || shopping.readFailure ? null : _add,
               icon: const Icon(Icons.add_circle_outline),
             ),
           ),
@@ -233,7 +234,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
             label: const Text('Copy to share'),
           ),
           OutlinedButton.icon(
-            onPressed: _busy || checked.isEmpty ? null : _clearBought,
+            onPressed: _busy || shopping.readFailure || checked.isEmpty ? null : _clearBought,
             icon: const Icon(Icons.cleaning_services_outlined),
             label: const Text('Clear checked'),
           ),
