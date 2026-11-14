@@ -110,3 +110,8 @@ Both independently installable Android editions can receive HTTPS recipe links f
 ### Secure Android APK updates (prepared, not activated)
 
 The development branch includes a manual Android release workflow designed to sign **both** independent APK editions with a protected, reusable signing key. It reads the key and passwords from GitHub Actions Secrets and produces signed artifacts with increasing build numbers, while leaving normal debug builds unchanged. This is not configured with a real key and has not run. The old debug-signed test APKs cannot update in-place to a differently signed release; users should back up their cookbook before making the one-time transition. See docs/android-signed-updates.md for exact secret names, security requirements and limitations.
+
+
+### Cook With What I Have — new pantry recipe discovery
+
+Kitchen Home now includes a **Cook With What I Have** screen in both editions. Enter up to three ingredients to find **offline matches in My Cookbook** and optionally discover additional recipe suggestions using a short, capped set of TheMealDB V1 requests. An **Offline-only search** toggle avoids network usage. Results show matched ingredient counts, not claims that a dish can be prepared exclusively from the entered items. The public API provides one-ingredient filters, so the code unions candidates across searches and ranks their full ingredient lists locally. See [pantry discovery notes](docs/cook-with-what-i-have.md), including the production API licensing requirement. This branch remains uncompiled and untested by request.
