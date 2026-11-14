@@ -584,6 +584,31 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   }
   @override void dispose() { _url.dispose(); _title.dispose(); _ingredients.dispose(); _instructions.dispose(); super.dispose(); }
 
+  Future<void> _pasteRecipeLink() async {
+    try {
+      final clipboardText = (await Clipboard.getData('text/plain'))?.text ?? '';
+      if (!mounted) return;
+      final match = RegExp(r'https://[^\s]+').firstMatch(clipboardText);
+      final candidate = match?.group(0)
+          ?.replaceAll(RegExp(r'[.,;)\]}>]+$'), '');
+      final url = Uri.tryParse(candidate ?? '');
+      if (url == null || url.scheme != 'https' || url.host.isEmpty ||
+          url.userInfo.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Copy a recipe link from your browser first.'),
+        ));
+        return;
+      }
+      setState(() => _url.text = url.toString());
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not paste the link. Try entering it manually.'),
+        ));
+      }
+    }
+  }
+
   Future<void> _add() async {
     setState(() => _importing = true);
     try {
@@ -641,7 +666,17 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     const SizedBox(height: 20),
     if (!_manual) ...[
       TextField(controller: _url, keyboardType: TextInputType.url,
+        textInputAction: TextInputAction.done,
         decoration: const InputDecoration(labelText: 'Recipe website link', hintText: 'https://...')),
+      const SizedBox(height: 8),
+      Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: _importing ? null : _pasteRecipeLink,
+          icon: const Icon(Icons.content_paste_rounded),
+          label: const Text('Paste recipe link'),
+        ),
+      ),
       const SizedBox(height: 10),
       const Text('We try to import ingredients and instructions when the website makes them available. Otherwise the link is saved.'),
     ] else ...[
