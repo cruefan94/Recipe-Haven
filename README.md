@@ -37,7 +37,7 @@ flutter build apk --debug --flavor babe --dart-define=EDITION=babe
 flutter build apk --debug --flavor momdad --dart-define=EDITION=momdad
 ```
 
-The GitHub workflow **Build Android — Babe and For Mom and Dad** is configured to produce clearly labelled TEST APK artifacts for both editions after this source is pushed; a successful run is not yet verified. These **debug-signed** APKs are not production signed and may not support updating in place across CI runner changes. Preserve a stable release signing key and add backup/export before publishing real releases. Do not commit private keys.
+The GitHub workflow **Build Android — Babe and For Mom and Dad** will produce clearly labelled TEST APK artifacts for both editions after a new GitHub repo is created and files are uploaded. These **debug-signed** APKs are not production signed and may not support updating in place across CI runner changes. Preserve a stable release signing key and add backup/export before publishing real releases. Do not commit private keys.
 
 ## iPhone / iOS build (For Mom and Dad ONLY)
 

@@ -1,0 +1,430 @@
+import 'package:flutter/material.dart';
+import '../models/recipe.dart';
+import '../services/cookbook_store.dart';
+import '../services/recipe_import_service.dart';
+import '../services/recipe_search_service.dart';
+import '../widgets/recipe_card.dart';
+import 'recipe_detail_screen.dart';
+import 'ingredient_finder_screen.dart';
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key, required this.cookbook});
+  final CookbookStore cookbook;
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _page = 0; // Kitchen dashboard; each cooking tool has its own full-screen page.
+  final _search = TextEditingController();
+  final _cookbookFilter = TextEditingController();
+  final _marijuanaFilter = TextEditingController();
+  String _newRecipeCollection = RecipeCollection.general;
+  final _api = RecipeSearchService();
+  List<Recipe> _results = const [];
+  List<String> _failed = const [];
+  String _searched = '';
+  bool _loading = false;
+  int _searchSequence = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.cookbook.addListener(_refresh);
+  }
+
+  void _refresh() { if (mounted) setState(() {}); }
+
+  @override
+  void dispose() {
+    _searchSequence++;
+    _search.dispose();
+    _cookbookFilter.dispose();
+    _marijuanaFilter.dispose();
+    _api.dispose();
+    widget.cookbook.removeListener(_refresh);
+    super.dispose();
+  }
+
+  void _notice(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _find(String searchText) async {
+    final query = searchText.trim();
+    if (query.isEmpty) return;
+    final request = ++_searchSequence;
+    FocusManager.instance.primaryFocus?.unfocus();
+    _search.text = query;
+    setState(() { _page = 1; _loading = true; _searched = query; _failed = []; });
+    try {
+      final data = await _api.search(query);
+      if (!mounted || request != _searchSequence) return;
+      setState(() { _results = data.recipes; _failed = data.failedSources; });
+    } catch (_) {
+      if (request == _searchSequence) _notice('Could not load recipes. Check your connection and try again.');
+    } finally {
+      if (mounted && request == _searchSequence) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _toggleSave(Recipe recipe) async {
+    try {
+      if (widget.cookbook.contains(recipe.id)) {
+        await widget.cookbook.remove(recipe.id);
+        _notice(recipe.collection == RecipeCollection.marijuana
+            ? 'Removed from Marijuana Cookbook' : 'Removed from My Cookbook');
+      } else {
+        await widget.cookbook.save(recipe);
+        _notice(recipe.collection == RecipeCollection.marijuana
+            ? 'Saved to Marijuana Cookbook' : 'Saved to My Cookbook');
+      }
+    } catch (_) { _notice('Could not save changes. Please try again.'); }
+  }
+
+  void _open(Recipe recipe) => Navigator.push(context, MaterialPageRoute<void>(builder: (_) =>
+    RecipeDetailScreen(recipe: recipe, cookbook: widget.cookbook)));
+
+  void _navigate(int page) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      // Add Recipe reached from the dashboard defaults to the regular cookbook.
+      if (page == 3) _newRecipeCollection = RecipeCollection.general;
+      _page = page;
+    });
+  }
+
+  Widget _dashboard() {
+    final theme = Theme.of(context);
+    final entries = <({String title, String subtitle, IconData icon, int page})>[
+      (title: 'Find Recipes', subtitle: 'Search and compare versions of your favourite dishes.', icon: Icons.search_rounded, page: 1),
+      (title: 'My Cookbook', subtitle: 'Read your saved recipes, including offline instructions.', icon: Icons.bookmark_rounded, page: 2),
+      (title: 'Add Recipe', subtitle: 'Import a recipe link or write down a family favourite.', icon: Icons.add_circle_outline_rounded, page: 3),
+      (title: 'Marijuana Cookbook', subtitle: 'Keep adult-use recipes in a separate collection.', icon: Icons.local_florist_rounded, page: 4),
+      (title: 'Find Ingredient', subtitle: 'Find grocery stores within 30 km and open product searches.', icon: Icons.shopping_basket_rounded, page: 5),
+    ];
+    return ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 28), children: [
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: theme.colorScheme.primaryContainer,
+          border: Border.all(color: theme.colorScheme.primary.withAlpha(120)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('RECIPE HAVEN', style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w900, color: theme.colorScheme.onPrimaryContainer)),
+          const SizedBox(height: 8),
+          Text('Everything you need for the kitchen, all in one place.',
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onPrimaryContainer)),
+        ]),
+      ),
+      const SizedBox(height: 22),
+      Text('YOUR KITCHEN', style: theme.textTheme.titleMedium?.copyWith(
+        color: theme.colorScheme.primary, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 12),
+      ...entries.map((entry) => Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _navigate(entry.page),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 84),
+            child: Padding(
+              padding: const EdgeInsets.all(15),
+              child: Row(children: [
+                Icon(entry.icon, size: 27, color: theme.colorScheme.primary),
+                const SizedBox(width: 14),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(entry.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Text(entry.subtitle, style: theme.textTheme.bodySmall),
+                  ],
+                )),
+                const SizedBox(width: 10),
+                Icon(Icons.chevron_right_rounded, color: theme.colorScheme.primary),
+              ]),
+            ),
+          ),
+        ),
+      )),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const pages = [
+      'Kitchen Home', 'Find Recipes', 'My Cookbook', 'Add Recipe',
+      'Marijuana Cookbook', 'Find Ingredient',
+    ];
+    return PopScope(
+      canPop: _page == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _page != 0) _navigate(0);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: _page == 0
+              ? const Icon(Icons.restaurant_menu_rounded)
+              : IconButton(
+                  tooltip: 'Back to Kitchen Home',
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  onPressed: () => _navigate(0),
+                ),
+          title: Text(pages[_page], style: const TextStyle(fontWeight: FontWeight.w800)),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          centerTitle: false,
+        ),
+        body: SafeArea(child: IndexedStack(index: _page, children: [
+          _dashboard(),
+          _discover(),
+          _cookbook(collection: RecipeCollection.general),
+          AddRecipeScreen(
+            key: ValueKey(_newRecipeCollection),
+            cookbook: widget.cookbook,
+            initialCollection: _newRecipeCollection,
+            onAdded: (collection) {
+              setState(() => _page = collection == RecipeCollection.marijuana ? 4 : 2);
+              _notice('Recipe added to ${collection == RecipeCollection.marijuana ? 'Marijuana Cookbook' : 'My Cookbook'}');
+            },
+          ),
+          _cookbook(collection: RecipeCollection.marijuana),
+          const IngredientFinderScreen(),
+        ])),
+      ),
+    );
+  }
+
+  Widget _discover() => ListView(
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+    children: [
+      Text('What sounds good today?', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _search,
+        textInputAction: TextInputAction.search,
+        onSubmitted: _find,
+        decoration: InputDecoration(
+          hintText: 'Try chicken Alfredo, tacos, banana bread…',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: IconButton(onPressed: () => _find(_search.text), tooltip: 'Search recipes', icon: const Icon(Icons.arrow_forward)),
+        ),
+      ),
+      const SizedBox(height: 12),
+      Wrap(spacing: 8, runSpacing: 6, children: ['Pasta', 'Chicken', 'Pizza', 'Soup', 'Chocolate cake']
+        .map((term) => ActionChip(label: Text(term), onPressed: () => _find(term))).toList()),
+      const SizedBox(height: 18),
+      if (_loading) const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+      else if (_searched.isEmpty) _empty(Icons.restaurant_menu, 'Search different recipes', 'Browse versions from different recipe sources and save your favourites.')
+      else ...[
+        Text('${_results.length} results for “$_searched”', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        if (_failed.isNotEmpty) Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text('Some sources were unavailable: ${_failed.join(', ')}', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        ),
+        if (_results.isEmpty) _empty(Icons.search_off, 'Nothing found in connected sources', 'Try another name, or search more websites below.'),
+        ..._results.map((recipe) => RecipeCard(
+          key: ValueKey(recipe.id), recipe: recipe,
+          isSaved: widget.cookbook.contains(recipe.id),
+          onOpen: () => _open(recipe), onToggleSave: () => _toggleSave(recipe),
+        )),
+      ],
+      const SizedBox(height: 14),
+      OutlinedButton.icon(
+        onPressed: () async {
+          final query = Uri.encodeQueryComponent(_search.text.trim().isEmpty ? 'recipes' : '${_search.text.trim()} recipe');
+          await openExternalUrl('https://www.google.com/search?q=$query', context);
+        },
+        icon: const Icon(Icons.public), label: const Text('Search the whole web'),
+      ),
+      const SizedBox(height: 8),
+      const Text('Web results open in your browser. Use Add Recipe to keep a recipe link in your cookbook.',
+        textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
+    ],
+  );
+
+  Widget _cookbook({required String collection}) {
+    final isMarijuana = collection == RecipeCollection.marijuana;
+    final filterController = isMarijuana ? _marijuanaFilter : _cookbookFilter;
+    final filter = filterController.text.trim().toLowerCase();
+    final savedInSection = widget.cookbook.saved.where((recipe) => recipe.collection == collection).toList();
+    final found = savedInSection.where((recipe) =>
+      recipe.title.toLowerCase().contains(filter) || recipe.source.toLowerCase().contains(filter)).toList();
+
+    return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
+      if (isMarijuana) ...[
+        Text('Marijuana Cookbook',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        const Text('A separate place for your adult-use cannabis recipes. Keep infused foods clearly labelled and out of reach of children and pets.'),
+        const SizedBox(height: 14),
+        FilledButton.icon(
+          onPressed: () => setState(() {
+            _newRecipeCollection = RecipeCollection.marijuana;
+            _page = 3;
+          }),
+          icon: const Icon(Icons.add),
+          label: const Text('Add marijuana recipe'),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: () => openExternalUrl('https://www.google.com/search?q=cannabis+edible+recipes', context),
+          icon: const Icon(Icons.public),
+          label: const Text('Find recipes on the web'),
+        ),
+        const SizedBox(height: 12),
+      ],
+      Text('${savedInSection.length} saved recipes', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 12),
+      TextField(
+        controller: filterController,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search),
+          hintText: isMarijuana ? 'Search marijuana cookbook' : 'Find a saved recipe',
+        ),
+      ),
+      const SizedBox(height: 16),
+      if (widget.cookbook.readFailure)
+        const Text('Your saved cookbook could not be read. Editing is disabled to protect its contents.'),
+      if (found.isEmpty) _empty(Icons.book_outlined,
+        isMarijuana ? 'Your marijuana cookbook is ready' : 'Your cookbook is ready',
+        isMarijuana
+          ? 'Use Add marijuana recipe to save your favourite recipes here, separately from My Cookbook.'
+          : 'Save recipes from search or add your own to see them here.'),
+      ...found.map((recipe) => RecipeCard(
+        key: ValueKey(recipe.id), recipe: recipe, isSaved: true,
+        onOpen: () => _open(recipe), onToggleSave: () => _confirmRemoval(recipe),
+      )),
+    ]);
+  }
+
+  Future<void> _confirmRemoval(Recipe recipe) async {
+    final shouldRemove = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('Remove saved recipe?'), content: Text(recipe.title),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Remove'))],
+    ));
+    if (shouldRemove == true) await _toggleSave(recipe);
+  }
+
+  Widget _empty(IconData icon, String headline, String copy) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 18),
+    child: Column(children: [Icon(icon, size: 62, color: Theme.of(context).colorScheme.primary),
+      const SizedBox(height: 12), Text(headline, textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 6), Text(copy, textAlign: TextAlign.center)]),
+  );
+}
+
+class AddRecipeScreen extends StatefulWidget {
+  const AddRecipeScreen({
+    super.key, required this.cookbook, required this.onAdded,
+    this.initialCollection = RecipeCollection.general,
+  });
+  final CookbookStore cookbook;
+  final ValueChanged<String> onAdded;
+  final String initialCollection;
+
+  @override
+  State<AddRecipeScreen> createState() => _AddRecipeScreenState();
+}
+
+class _AddRecipeScreenState extends State<AddRecipeScreen> {
+  final _url = TextEditingController();
+  final _title = TextEditingController();
+  final _ingredients = TextEditingController();
+  final _instructions = TextEditingController();
+  bool _importing = false;
+  bool _manual = false;
+  late String _collection;
+  @override void initState() {
+    super.initState();
+    _collection = widget.initialCollection == RecipeCollection.marijuana
+        ? RecipeCollection.marijuana : RecipeCollection.general;
+  }
+  @override void dispose() { _url.dispose(); _title.dispose(); _ingredients.dispose(); _instructions.dispose(); super.dispose(); }
+
+  Future<void> _add() async {
+    setState(() => _importing = true);
+    try {
+      Recipe recipe;
+      if (_manual) {
+        if (_title.text.trim().isEmpty) throw const FormatException('Give your recipe a title.');
+        final identifier = 'manual:${DateTime.now().microsecondsSinceEpoch}';
+        recipe = Recipe(id: identifier, title: _title.text.trim(), source: 'My recipes',
+          ingredients: _lines(_ingredients.text), steps: _lines(_instructions.text),
+          collection: _collection);
+      } else {
+        recipe = await RecipeImportService().importUrl(_url.text);
+      }
+      // Keep separate copies when the same online recipe is saved into
+      // both collections, without overwriting the everyday cookbook entry.
+      recipe = recipe.copyWith(
+        collection: _collection,
+        id: _collection == RecipeCollection.marijuana
+            ? 'marijuana:${recipe.id}' : recipe.id,
+      );
+      await widget.cookbook.save(recipe);
+      if (!mounted) return;
+      _url.clear(); _title.clear(); _ingredients.clear(); _instructions.clear();
+      widget.onAdded(_collection);
+    } catch (e) {
+      if (!mounted) return;
+      final message = e is FormatException ? e.message.toString() : 'Could not add the recipe. Check the link and try again.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } finally { if (mounted) setState(() => _importing = false); }
+  }
+
+  List<String> _lines(String input) => input.split(RegExp(r'\r?\n')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+
+  @override Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
+    Text('Keep recipes from anywhere', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+    const SizedBox(height: 8),
+    const Text('Save a link from a cooking website, or write down a family favourite.'),
+    const SizedBox(height: 20),
+    ...[
+      const Text('Save into', style: TextStyle(fontWeight: FontWeight.w600)),
+      const SizedBox(height: 8),
+      SegmentedButton<String>(
+        segments: const [
+          ButtonSegment(value: RecipeCollection.general, label: Text('My Cookbook')),
+          ButtonSegment(value: RecipeCollection.marijuana, label: Text('Marijuana')),
+        ],
+        selected: {_collection},
+        onSelectionChanged: (value) => setState(() => _collection = value.first),
+      ),
+      const SizedBox(height: 18),
+    ],
+    SegmentedButton<bool>(segments: const [ButtonSegment(value: false, icon: Icon(Icons.link), label: Text('From a link')),
+      ButtonSegment(value: true, icon: Icon(Icons.edit_outlined), label: Text('Write my own'))],
+      selected: {_manual}, onSelectionChanged: (value) => setState(() => _manual = value.first)),
+    const SizedBox(height: 20),
+    if (!_manual) ...[
+      TextField(controller: _url, keyboardType: TextInputType.url,
+        decoration: const InputDecoration(labelText: 'Recipe website link', hintText: 'https://...')),
+      const SizedBox(height: 10),
+      const Text('We try to import ingredients and instructions when the website makes them available. Otherwise the link is saved.'),
+    ] else ...[
+      TextField(controller: _title, textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(labelText: 'Recipe name')),
+      const SizedBox(height: 12),
+      TextField(controller: _ingredients, maxLines: 6, minLines: 4, textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(labelText: 'Ingredients', hintText: 'One ingredient per line')),
+      const SizedBox(height: 12),
+      TextField(controller: _instructions, maxLines: 8, minLines: 5, textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(labelText: 'Instructions', hintText: 'One step per line')),
+    ],
+    const SizedBox(height: 20),
+    FilledButton.icon(onPressed: _importing ? null : _add,
+      icon: _importing ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.bookmark_add_outlined),
+      label: Text(_importing ? 'Saving…' :
+        _collection == RecipeCollection.marijuana ? 'Save to Marijuana Cookbook' : 'Save to My Cookbook'),
+      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54))),
+  ]);
+}
