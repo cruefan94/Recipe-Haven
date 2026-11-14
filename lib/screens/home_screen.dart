@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/cookbook_file_service.dart';
 import '../models/recipe.dart';
 import '../services/cookbook_store.dart';
 import '../services/recipe_import_service.dart';
@@ -23,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _marijuanaFilter = TextEditingController();
   String _newRecipeCollection = RecipeCollection.general;
   final _api = RecipeSearchService();
+  bool _fileTransferBusy = false;
   List<Recipe> _results = const [];
   List<String> _failed = const [];
   String _searched = '';
@@ -248,6 +250,59 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _saveBackupFile() async {
+    if (_fileTransferBusy) return;
+    setState(() => _fileTransferBusy = true);
+    try {
+      final saved = await CookbookFileService.saveBackup(widget.cookbook);
+      if (mounted && saved) _notice('Backup saved. Keep your JSON file private.');
+    } on FormatException catch (e) {
+      _notice(e.message.toString());
+    } catch (_) {
+      _notice('Could not save JSON file. You can still copy the backup.');
+    } finally {
+      if (mounted) setState(() => _fileTransferBusy = false);
+    }
+  }
+
+  Future<void> _restoreBackupFile() async {
+    if (_fileTransferBusy) return;
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Import your cookbook?'),
+        content: const Text('Select a Recipe Haven JSON backup. '
+          'Recipes will be merged and existing recipes will not be deleted. '
+          'Only import a file you trust.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Choose JSON file'),
+          ),
+        ],
+      ),
+    );
+    if (approved != true || !mounted) return;
+    setState(() => _fileTransferBusy = true);
+    try {
+      final count = await CookbookFileService.restoreBackup(widget.cookbook);
+      if (mounted && count != null) {
+        _notice(count == 0 ? 'All backup recipes are already saved.'
+            : '$count recipes imported. Your existing recipes were kept.');
+      }
+    } on FormatException catch (e) {
+      _notice(e.message.toString());
+    } catch (_) {
+      _notice('Could not import the backup. Existing recipes were not deleted.');
+    } finally {
+      if (mounted) setState(() => _fileTransferBusy = false);
+    }
+  }
+
   Widget _backupPage() => ListView(
     padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
     children: [
@@ -257,6 +312,21 @@ class _HomeScreenState extends State<HomeScreen> {
       const Text('Back up both My Cookbook and Marijuana Cookbook together. '
         'Saved recipes include ingredients, cooking steps and source links.'),
       const SizedBox(height: 20),
+      FilledButton.icon(
+        onPressed: _fileTransferBusy ? null : _saveBackupFile,
+        icon: const Icon(Icons.save_alt_rounded),
+        label: const Text('Save cookbook to JSON file'),
+      ),
+      const SizedBox(height: 12),
+      OutlinedButton.icon(
+        onPressed: _fileTransferBusy ? null : _restoreBackupFile,
+        icon: const Icon(Icons.file_open_rounded),
+        label: const Text('Import cookbook from JSON file'),
+      ),
+      const SizedBox(height: 22),
+      Text('Clipboard transfer (for smaller cookbooks)',
+        style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 12),
       FilledButton.icon(
         onPressed: _copyBackup,
         icon: const Icon(Icons.copy_all_rounded),
@@ -269,9 +339,10 @@ class _HomeScreenState extends State<HomeScreen> {
         label: const Text('Restore from clipboard'),
       ),
       const SizedBox(height: 18),
-      const Text('To transfer, paste your backup into a private note or message. '
-        'Copy that text on the new phone and choose Restore. Existing recipes stay untouched. '
-        'Large cookbooks may exceed clipboard size limits. Never post your private recipes publicly.'),
+      const Text('Recommended: save a JSON file and move it to your other phone '
+        'using Files, cloud storage or a private message. On the other phone, choose '
+        'Import cookbook from JSON file. Clipboard remains available for small transfers. '
+        'The JSON file includes any personally saved recipes and should not be shared publicly.'),
     ],
   );
 

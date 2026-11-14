@@ -81,3 +81,8 @@ All source providers retain their own content rights and terms. Universal search
 On the source branch `feature/ingredient-products-and-cookbook-backup`, **Backup & Restore** copies a versioned JSON backup of both saved cookbook collections to the clipboard and restores by *merging* entries without deleting existing recipes. Large backups may exceed clipboard limits. Find Ingredient also accepts optional retailer-provided product names, sizes, prices, stock indications and direct URLs from an authorized HTTPS catalogue adapter (see `docs/ingredient-product-feed.md`). No retailer API is live by default, so the app does not manufacture stock or prices.
 
 **This feature branch has deliberately not been compiled or tested.** The previously successful Android APKs were built from `main`, before these changes.
+
+
+### Portable file backups — development branch
+
+Android and iOS now have source-level support for a system-native **Save cookbook to JSON file** action and **Import cookbook from JSON file** action. Both collections are included. Import uses the existing validated merge behavior, preserving recipes already saved on the device. The file-picker dependency is `file_picker ^13.3.3` (iOS 14+). Existing clipboard transfer remains as a fallback. The feature has not been compiled or device-tested at the user's request.
