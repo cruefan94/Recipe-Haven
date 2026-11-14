@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'config/edition.dart';
 import 'screens/home_screen.dart';
 import 'services/cookbook_store.dart';
+import 'services/incoming_recipe_share.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final edition = EditionConfig.resolve(platform: defaultTargetPlatform);
   final cookbook = await CookbookStore.load();
+  // A shared browser link is queued until the user opens Add Recipe.
+  // iOS ignores this Android-only bridge.
+  await IncomingRecipeShare.instance.initialize();
   runApp(RecipeHavenApp(cookbook: cookbook, edition: edition));
 }
 
