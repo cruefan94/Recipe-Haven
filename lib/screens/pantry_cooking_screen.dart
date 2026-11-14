@@ -25,6 +25,7 @@ class _PantryCookingScreenState extends State<PantryCookingScreen> {
   List<PantryRecipeMatch> _onlineMatches = const [];
   List<String> _unavailableFilters = const [];
   bool _busy = false;
+  bool _offlineOnly = false;
   String? _error;
   String _note = '';
   int _searchId = 0;
@@ -89,6 +90,13 @@ class _PantryCookingScreenState extends State<PantryCookingScreen> {
       _busy = true;
       _error = null;
     });
+    if (_offlineOnly) {
+      setState(() {
+        _busy = false;
+        _note = 'Offline-only mode: showing matches from saved recipes.';
+      });
+      return;
+    }
     try {
       final result = await _api.searchPantry(terms.join(', '));
       if (!mounted || request != _searchId) return;
@@ -189,11 +197,19 @@ class _PantryCookingScreenState extends State<PantryCookingScreen> {
             prefixIcon: Icon(Icons.kitchen_outlined),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Offline-only search'),
+          subtitle: const Text('Search saved recipes without using internet'),
+          value: _offlineOnly,
+          onChanged: _busy ? null : (value) => setState(() => _offlineOnly = value),
+        ),
+        const SizedBox(height: 8),
         FilledButton.icon(
           onPressed: _busy ? null : _search,
           icon: const Icon(Icons.restaurant_menu_rounded),
-          label: Text(_busy ? 'Finding meal ideas…' : 'Find meals I can make'),
+          label: Text(_busy ? 'Finding meal ideas…' : 'Find recipe ideas'),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -227,14 +243,17 @@ class _PantryCookingScreenState extends State<PantryCookingScreen> {
             const Text('No matching saved recipes with ingredient lists yet.'),
           ..._savedMatches.map(_recipeMatch),
           const SizedBox(height: 18),
-          Text('Discover more recipes online',
+          Text(_offlineOnly ? 'Offline search' : 'Discover more recipes online',
               style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           if (_busy) const Padding(
             padding: EdgeInsets.all(22),
             child: Center(child: CircularProgressIndicator()),
-          ) else if (online.isEmpty)
+          ) else if (_offlineOnly)
+            const Text('Only previously saved recipes were searched. '
+                'Turn off Offline-only search to request more recipes.')
+          else if (online.isEmpty)
             const Text('No new online recipes returned for this search. '
                 'Try a more general ingredient such as chicken or potato.'),
           if (_unavailableFilters.isNotEmpty) ...[
