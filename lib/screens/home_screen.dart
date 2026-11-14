@@ -389,8 +389,29 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         icon: const Icon(Icons.public), label: const Text('Search the whole web'),
       ),
+      const SizedBox(height: 12),
+      Text('Browse more cooking sites',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
       const SizedBox(height: 8),
-      Text('Web results open in your browser. Use Add Recipe to keep a recipe link in your cookbook.',
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        ('Allrecipes', 'allrecipes.com'),
+        ('Food Network', 'foodnetwork.com'),
+        ('BBC Good Food', 'bbcgoodfood.com'),
+        ('Taste of Home', 'tasteofhome.com'),
+        ('Serious Eats', 'seriouseats.com'),
+      ].map((site) => ActionChip(
+        avatar: const Icon(Icons.open_in_new, size: 17),
+        label: Text(site.$1),
+        onPressed: () => openExternalUrl(
+          Uri.https('www.google.com', '/search', {
+            'q': 'site:${site.$2} ${_search.text.trim().isEmpty ? 'recipes' : _search.text.trim()} recipe'
+          }).toString(),
+          context,
+        ),
+      )).toList()),
+      const SizedBox(height: 8),
+      Text('These extra websites open in your browser, not inside the search results list. '
+        'Use Add Recipe to save a link, or open a listed website recipe and select Import ingredients & steps.',
         textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
     ],
   );
