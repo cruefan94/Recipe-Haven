@@ -29,6 +29,9 @@ jobs:
           with tarfile.open(fileobj=BytesIO(compressed), mode='r:xz') as archive:
               for member in archive:
                   relative = PurePosixPath(member.name)
+                  # The Actions token cannot create workflow files. Add those via the GitHub connection.
+                  if relative.parts[:2] == ('.github', 'workflows'):
+                      continue
                   if member.isdir():
                       continue
                   if not member.isfile() or relative.is_absolute() or '..' in relative.parts:
