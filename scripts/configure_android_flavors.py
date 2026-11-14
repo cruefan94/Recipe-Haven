@@ -31,6 +31,30 @@ if 'create("babe")' not in s:
 elif 'create("momdad")' not in s:
     s = s.replace('productFlavors {',
                   'productFlavors {\n        create("momdad") { dimension = "edition" }', 1)
+# Persistent release signing is optional and never activated for normal debug
+# builds. The keystore remains outside the repository and is supplied by
+# protected GitHub Actions secrets (or a local environment).
+if 'recipeHavenSignedRelease' not in s:
+    signing = '''android {
+    val releaseKeyFile = System.getenv("RECIPE_HAVEN_RELEASE_KEYSTORE")
+    if (!releaseKeyFile.isNullOrBlank()) {
+        signingConfigs {
+            create("recipeHavenSignedRelease") {
+                storeFile = file(releaseKeyFile)
+                storePassword = System.getenv("RECIPE_HAVEN_RELEASE_STORE_PASSWORD")
+                keyAlias = System.getenv("RECIPE_HAVEN_RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RECIPE_HAVEN_RELEASE_KEY_PASSWORD")
+            }
+        }
+        buildTypes {
+            getByName("release") {
+                signingConfig = signingConfigs.getByName("recipeHavenSignedRelease")
+            }
+        }
+    }
+'''
+    s = s.replace('android {', signing, 1)
+
 gradle.write_text(s)
 
 m = manifest.read_text()
