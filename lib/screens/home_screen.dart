@@ -8,6 +8,7 @@ import '../services/recipe_search_service.dart';
 import '../widgets/recipe_card.dart';
 import 'recipe_detail_screen.dart';
 import 'ingredient_finder_screen.dart';
+import 'ingredient_alternatives_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.cookbook});
@@ -25,6 +26,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String _newRecipeCollection = RecipeCollection.general;
   final _api = RecipeSearchService();
   bool _fileTransferBusy = false;
+  String _prefillAlternatives = '';
+  String _prefillFinder = '';
   List<Recipe> _results = const [];
   List<String> _failed = const [];
   String _searched = '';
@@ -99,6 +102,22 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _findAlternativesFor(String ingredient) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _prefillAlternatives = ingredient;
+      _page = 7;
+    });
+  }
+
+  void _findStoresFor(String ingredient) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _prefillFinder = ingredient;
+      _page = 5;
+    });
+  }
+
   Widget _dashboard() {
     final theme = Theme.of(context);
     final entries = <({String title, String subtitle, IconData icon, int page})>[
@@ -107,6 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
       (title: 'Add Recipe', subtitle: 'Import a recipe link or write down a family favourite.', icon: Icons.add_circle_outline_rounded, page: 3),
       (title: 'Marijuana Cookbook', subtitle: 'Keep adult-use recipes in a separate collection.', icon: Icons.local_florist_rounded, page: 4),
       (title: 'Find Ingredient', subtitle: 'Find grocery stores within 30 km and open product searches.', icon: Icons.shopping_basket_rounded, page: 5),
+      (title: 'Ingredient Alternatives', subtitle: 'Out of something? See substitute amounts and best uses, even offline.', icon: Icons.swap_horiz_rounded, page: 7),
       (title: 'Backup & Restore', subtitle: 'Make a copy of all saved recipes or restore a previous cookbook.', icon: Icons.settings_backup_restore_rounded, page: 6),
     ];
     return ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 28), children: [
@@ -164,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const pages = [
       'Kitchen Home', 'Find Recipes', 'My Cookbook', 'Add Recipe',
       'Marijuana Cookbook', 'Find Ingredient', 'Backup & Restore',
+      'Ingredient Alternatives',
     ];
     return PopScope(
       canPop: _page == 0,
@@ -197,8 +218,17 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           _cookbook(collection: RecipeCollection.marijuana),
-          const IngredientFinderScreen(),
+          IngredientFinderScreen(
+            key: ValueKey(_prefillFinder),
+            initialIngredient: _prefillFinder,
+            onFindAlternatives: _findAlternativesFor,
+          ),
           _backupPage(),
+          IngredientAlternativesScreen(
+            key: ValueKey(_prefillAlternatives),
+            initialIngredient: _prefillAlternatives,
+            onFindNearby: _findStoresFor,
+          ),
         ])),
       ),
     );

@@ -93,3 +93,10 @@ Android and iOS now have source-level support for a system-native **Save cookboo
 Recipe details can now attempt **Import ingredients & steps** from a website when a search result was link-only; the original URL remains accessible if the website does not provide structured recipe metadata. Previously saved link-only recipes are updated in place when an import succeeds, while unsaved results require the user to tap Save. The search screen also offers browser-based recipe search shortcuts for Allrecipes, Food Network, BBC Good Food, Taste of Home, and Serious Eats. These are **external browser searches**, not additional in-app indexed recipes. All changes remain **untested and uncompiled**, per request.
 
 The iOS Mom and Dad bootstrap now targets iOS **14.0+**, matching the file-picker plugin requirement; this affects no Babe edition iOS build because Babe is Android-only.
+
+
+## Offline Ingredient Alternatives (in-development branch)
+
+Both editions now include a **Ingredient Alternatives** kitchen tool. Enter a missing ingredient or tap the swap icon beside an ingredient in any recipe, and the app shows offline substitute suggestions with **reference amounts, recommended uses, and limitations**. The Find Ingredient page also links directly to this feature, and the replacement guide links back to the 30 km store finder. The built-in reference currently covers **41** common ingredients and **82** contextual replacement options. Typed recipe quantities do **not** automatically scale the amounts; each reference amount is clearly labeled. Never apply these unverified swaps to home canning, infant food, or medical diets. See `docs/ingredient-alternatives.md` for reference sources.
+
+As requested, the new source has **not been compiled, tested, or merged into the previously verified APK builds**.

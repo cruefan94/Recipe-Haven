@@ -6,13 +6,26 @@ import '../services/store_locator.dart';
 /// Find local grocery businesses by location, then link to their own catalogs.
 /// A business's presence on Maps is not evidence of item stock or price.
 class IngredientFinderScreen extends StatefulWidget {
-  const IngredientFinderScreen({super.key});
+  const IngredientFinderScreen({
+    super.key,
+    this.initialIngredient = '',
+    this.onFindAlternatives,
+  });
+
+  final String initialIngredient;
+  final ValueChanged<String>? onFindAlternatives;
   @override
   State<IngredientFinderScreen> createState() => _IngredientFinderScreenState();
 }
 
 class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
-  final _ingredient = TextEditingController();
+  late final TextEditingController _ingredient;
+
+  @override
+  void initState() {
+    super.initState();
+    _ingredient = TextEditingController(text: widget.initialIngredient);
+  }
   final _locator = StoreLocator();
   NearbyStoreResults? _found;
   Position? _position;
@@ -114,6 +127,14 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
         icon: const Icon(Icons.map_outlined),
         label: const Text('Search nearby on Google Maps'),
       ),
+      if (widget.onFindAlternatives != null) ...[
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => widget.onFindAlternatives!(_ingredient.text.trim()),
+          icon: const Icon(Icons.swap_horiz_rounded),
+          label: const Text('Out of stock? Find an alternative'),
+        ),
+      ],
       const SizedBox(height: 12),
       Text('Location is requested only when you search. Your current coordinates are sent to a store-directory provider to locate nearby businesses. No background tracking.',
         style: Theme.of(context).textTheme.bodySmall),

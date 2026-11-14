@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/recipe.dart';
 import '../services/cookbook_store.dart';
 import '../services/recipe_import_service.dart';
+import 'ingredient_alternatives_screen.dart';
 
 Future<void> openExternalUrl(String raw, BuildContext context) async {
   final uri = Uri.tryParse(raw);
@@ -153,6 +154,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           ...recipe.ingredients.asMap().entries.map((item) => CheckboxListTile(
             value: _checked.contains(item.key), controlAffinity: ListTileControlAffinity.leading,
             title: Text(item.value), contentPadding: EdgeInsets.zero,
+            secondary: IconButton(
+              icon: const Icon(Icons.swap_horiz_rounded),
+              tooltip: 'Find alternative to ingredient',
+              onPressed: () => Navigator.push(context, MaterialPageRoute<void>(
+                builder: (_) => Scaffold(
+                  appBar: AppBar(title: const Text('Ingredient Alternatives')),
+                  body: SafeArea(child: IngredientAlternativesScreen(
+                    initialIngredient: item.value,
+                  )),
+                ),
+              )),
+            ),
             onChanged: (isChecked) => setState(() { if (isChecked == true) { _checked.add(item.key); } else { _checked.remove(item.key); } }),
           )),
         ],
