@@ -44,7 +44,30 @@ for permission in [
 ]:
     if permission not in m:
         m = m.replace('<application', f'<uses-permission android:name="{permission}" />\n    <application', 1)
+# Android's Share menu can deliver text/plain recipe URLs directly to
+# either edition. This adds no storage or new dangerous permissions.
+if 'android.intent.action.SEND' not in m:
+    if '</activity>' not in m:
+        raise SystemExit('Unknown Android manifest template: missing main activity end tag.')
+    share_filter = '''        <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        '''
+    m = m.replace('</activity>', share_filter + '</activity>', 1)
+
 manifest.write_text(m)
+
+# Flutter generates a default MainActivity during bootstrap. Replace only
+# that generated Android entry point with our dedicated share receiver.
+template = root / 'platform/android/MainActivity.kt'
+target = root / 'android/app/src/main/kotlin/com/cruefan94/recipe_haven/MainActivity.kt'
+if not template.is_file():
+    raise SystemExit('Missing Android share receiver template.')
+target.parent.mkdir(parents=True, exist_ok=True)
+target.write_text(template.read_text())
+
 for flavor, label in [('momdad', 'For Mom and Dad'), ('babe', 'Recipe Haven 💛')]:
     strings = root / 'android/app/src' / flavor / 'res/values/strings.xml'
     strings.parent.mkdir(parents=True, exist_ok=True)
