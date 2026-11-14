@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/recipe.dart';
 import '../services/cookbook_store.dart';
 import '../services/recipe_import_service.dart';
@@ -104,6 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
       (title: 'Add Recipe', subtitle: 'Import a recipe link or write down a family favourite.', icon: Icons.add_circle_outline_rounded, page: 3),
       (title: 'Marijuana Cookbook', subtitle: 'Keep adult-use recipes in a separate collection.', icon: Icons.local_florist_rounded, page: 4),
       (title: 'Find Ingredient', subtitle: 'Find grocery stores within 30 km and open product searches.', icon: Icons.shopping_basket_rounded, page: 5),
+      (title: 'Backup & Restore', subtitle: 'Make a copy of all saved recipes or restore a previous cookbook.', icon: Icons.settings_backup_restore_rounded, page: 6),
     ];
     return ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 28), children: [
       Container(
@@ -159,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     const pages = [
       'Kitchen Home', 'Find Recipes', 'My Cookbook', 'Add Recipe',
-      'Marijuana Cookbook', 'Find Ingredient',
+      'Marijuana Cookbook', 'Find Ingredient', 'Backup & Restore',
     ];
     return PopScope(
       canPop: _page == 0,
@@ -194,10 +196,84 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           _cookbook(collection: RecipeCollection.marijuana),
           const IngredientFinderScreen(),
+          _backupPage(),
         ])),
       ),
     );
   }
+
+  Future<void> _copyBackup() async {
+    try {
+      await Clipboard.setData(ClipboardData(text: widget.cookbook.exportBackup()));
+      _notice('Backup copied. Save it in a private note before switching phones.');
+    } catch (_) {
+      _notice('Unable to copy your cookbook right now.');
+    }
+  }
+
+  Future<void> _restoreBackup() async {
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Restore recipes from clipboard?'),
+        content: const Text('This merges recipes from a Recipe Haven backup. '
+          'Existing saved recipes are never deleted or replaced.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Restore recipes'),
+          ),
+        ],
+      ),
+    );
+    if (approved != true || !mounted) return;
+    try {
+      final value = (await Clipboard.getData('text/plain'))?.text;
+      if (value == null || value.trim().isEmpty) {
+        _notice('Clipboard is empty. Copy a Recipe Haven backup first.');
+        return;
+      }
+      final imported = await widget.cookbook.mergeBackup(value);
+      _notice(imported == 0
+          ? 'All backup recipes are already saved.'
+          : '$imported recipes restored successfully.');
+    } on FormatException catch (e) {
+      _notice(e.message.toString());
+    } catch (_) {
+      _notice('Unable to restore backup. Existing recipes are unchanged.');
+    }
+  }
+
+  Widget _backupPage() => ListView(
+    padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
+    children: [
+      Text('Protect your saved recipes',
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 10),
+      const Text('Back up both My Cookbook and Marijuana Cookbook together. '
+        'Saved recipes include ingredients, cooking steps and source links.'),
+      const SizedBox(height: 20),
+      FilledButton.icon(
+        onPressed: _copyBackup,
+        icon: const Icon(Icons.copy_all_rounded),
+        label: const Text('Copy cookbook backup'),
+      ),
+      const SizedBox(height: 12),
+      OutlinedButton.icon(
+        onPressed: _restoreBackup,
+        icon: const Icon(Icons.settings_backup_restore_rounded),
+        label: const Text('Restore from clipboard'),
+      ),
+      const SizedBox(height: 18),
+      const Text('To transfer, paste your backup into a private note or message. '
+        'Copy that text on the new phone and choose Restore. Existing recipes stay untouched. '
+        'Large cookbooks may exceed clipboard size limits. Never post your private recipes publicly.'),
+    ],
+  );
 
   Widget _discover() => ListView(
     padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -280,6 +356,12 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 12),
       ],
       Text('${savedInSection.length} saved recipes', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 8),
+      OutlinedButton.icon(
+        onPressed: () => _navigate(6),
+        icon: const Icon(Icons.settings_backup_restore_rounded),
+        label: const Text('Backup & Restore'),
+      ),
       const SizedBox(height: 12),
       TextField(
         controller: filterController,

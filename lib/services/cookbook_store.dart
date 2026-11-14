@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/recipe.dart';
 
-/// Locally stored cookbook. Offline text survives normal app updates, but a
-/// device uninstall removes it; future versions should offer export/backup.
+/// Locally stored cookbook with portable versioned JSON backup/restore.
+ /// Backups include personal recipe text and links and should be kept private.
 class CookbookStore extends ChangeNotifier {
   CookbookStore(this._prefs);
   final SharedPreferencesAsync _prefs;
@@ -32,6 +32,60 @@ class CookbookStore extends ChangeNotifier {
 
   bool _readFailure = false;
   bool get readFailure => _readFailure;
+
+  /// A portable text backup of both collections, including saved offline text.
+  String exportBackup() => const JsonEncoder.withIndent('  ').convert({
+    'format': 'recipe-haven-cookbook',
+    'version': 1,
+    'recipes': _saved.map((recipe) => recipe.toJson()).toList(),
+  });
+
+  /// Add recipes from a backup without removing existing entries.
+  /// Input is validated before the first change; persistence failures roll back.
+  Future<int> mergeBackup(String text) async {
+    if (_readFailure) throw StateError('Cookbook is unreadable; import disabled.');
+    if (text.length > 8 * 1024 * 1024) {
+      throw const FormatException('Backup is too large for clipboard restore.');
+    }
+    dynamic data;
+    try {
+      data = jsonDecode(text);
+    } catch (_) {
+      throw const FormatException('Clipboard does not contain valid JSON.');
+    }
+    if (data is! Map ||
+        data['format'] != 'recipe-haven-cookbook' ||
+        data['version'] != 1 ||
+        data['recipes'] is! List) {
+      throw const FormatException('Not a supported Recipe Haven backup.');
+    }
+    final rows = data['recipes'] as List;
+    if (rows.length > 5000) {
+      throw const FormatException('Backup contains too many recipes.');
+    }
+    final incoming = <Recipe>[];
+    for (final row in rows) {
+      if (row is! Map) throw const FormatException('Backup has an invalid recipe.');
+      final recipe = Recipe.fromJson(Map<String, dynamic>.from(row));
+      if (recipe.id.trim().isEmpty || recipe.title.trim().isEmpty) {
+        throw const FormatException('Backup has an invalid recipe ID or title.');
+      }
+      incoming.add(recipe);
+    }
+    final ids = _saved.map((recipe) => recipe.id).toSet();
+    final unique = incoming.where((recipe) => ids.add(recipe.id)).toList();
+    if (unique.isEmpty) return 0;
+    final previous = List<Recipe>.from(_saved);
+    _saved.addAll(unique);
+    try {
+      await _persist();
+    } catch (_) {
+      _saved..clear()..addAll(previous);
+      rethrow;
+    }
+    notifyListeners();
+    return unique.length;
+  }
 
   Future<void> save(Recipe recipe) async {
     if (_readFailure) throw StateError('Saved cookbook could not be loaded. Please back up the app data before editing.');

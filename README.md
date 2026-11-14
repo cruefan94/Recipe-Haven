@@ -74,3 +74,10 @@ This project belongs in a separate repository at [`cruefan94/Recipe-Haven`](http
 - [KitchenOwl](https://github.com/TomBursch/kitchenowl), [recipe-scrapers-webservice](https://github.com/steve192/recipe-scrapers-webservice), and [Chefs-Book-TheMealDB-integration](https://github.com/JustTeRoR/Chefs-Book-TheMealDB-integration-) were studied as public references. **Their application code was not copied.**
 
 All source providers retain their own content rights and terms. Universal search coverage, production catalog integration, cloud backup, full accessibility and user testing, signed Android releases, and signed iOS builds remain incomplete.
+
+
+### In-development recipe backup and retailer product listings
+
+On the source branch `feature/ingredient-products-and-cookbook-backup`, **Backup & Restore** copies a versioned JSON backup of both saved cookbook collections to the clipboard and restores by *merging* entries without deleting existing recipes. Large backups may exceed clipboard limits. Find Ingredient also accepts optional retailer-provided product names, sizes, prices, stock indications and direct URLs from an authorized HTTPS catalogue adapter (see `docs/ingredient-product-feed.md`). No retailer API is live by default, so the app does not manufacture stock or prices.
+
+**This feature branch has deliberately not been compiled or tested.** The previously successful Android APKs were built from `main`, before these changes.
