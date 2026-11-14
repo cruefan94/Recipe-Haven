@@ -53,7 +53,9 @@ if 'recipeHavenSignedRelease' not in s:
         }
     }
 '''
-    s = s.replace('android {', signing, 1)
+    # Apply signing after Flutter's default release build type, otherwise
+    # Flutter's generated debug-signing fallback would overwrite it.
+    s += '\n' + signing + '}\n'
 
 gradle.write_text(s)
 
