@@ -3,7 +3,7 @@ name: Build Android — Babe and For Mom and Dad
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, feature/ingredient-products-and-cookbook-backup]
 
 permissions:
   contents: read
