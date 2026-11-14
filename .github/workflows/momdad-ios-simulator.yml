@@ -1,0 +1,40 @@
+name: Build iOS Simulator — For Mom and Dad ONLY
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  momdad-ios-simulator:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Generate For Mom and Dad iOS project
+        run: bash scripts/bootstrap_ios_momdad.sh
+      - name: Static analysis
+        run: flutter analyze
+      - name: Unit tests
+        run: flutter test
+      - name: Build unsigned iOS simulator application (NOT iPhone-installable)
+        run: flutter build ios --simulator --debug --no-codesign --dart-define=EDITION=momdad
+      - name: Package simulator application
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app For-Mom-and-Dad-iOS-SIMULATOR-ONLY.zip
+      - name: Upload simulator verification artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: For-Mom-and-Dad-iOS-SIMULATOR-ONLY
+          path: For-Mom-and-Dad-iOS-SIMULATOR-ONLY.zip
+          retention-days: 14
