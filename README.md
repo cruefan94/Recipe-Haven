@@ -105,3 +105,8 @@ As requested, the new source has **not been compiled, tested, or merged into the
 ### Android Share-to-Recipe-Haven (development branch)
 
 Both independently installable Android editions can receive HTTPS recipe links from Android's Share menu. The user is taken to **Add Recipe** with the shared URL prefilled; they choose their cookbook collection and explicitly tap Save. For browsers without a Recipe Haven Share destination, **Paste recipe link** reads a copied HTTPS URL from the clipboard. No recipe is saved automatically and no extra dangerous Android permission is needed. See docs/android-share-recipes.md for the Android native bridge and privacy behavior. This is source-only, not included in the earlier APKs, and has not been tested or built following the request to continue development without verification.
+
+
+### Secure Android APK updates (prepared, not activated)
+
+The development branch includes a manual Android release workflow designed to sign **both** independent APK editions with a protected, reusable signing key. It reads the key and passwords from GitHub Actions Secrets and produces signed artifacts with increasing build numbers, while leaving normal debug builds unchanged. This is not configured with a real key and has not run. The old debug-signed test APKs cannot update in-place to a differently signed release; users should back up their cookbook before making the one-time transition. See docs/android-signed-updates.md for exact secret names, security requirements and limitations.
