@@ -145,7 +145,9 @@ Uri? safeWebsite(String? value) {
   final trimmed = value.trim();
   final parsed = Uri.tryParse(trimmed.contains('://') ? trimmed : 'https://$trimmed');
   if (parsed == null || !{'http', 'https'}.contains(parsed.scheme) ||
-      parsed.host.isEmpty || !parsed.host.contains('.') || parsed.userInfo.isNotEmpty) return null;
+      parsed.host.isEmpty || !parsed.host.contains('.') || parsed.userInfo.isNotEmpty) {
+    return null;
+  }
   return parsed;
 }
 

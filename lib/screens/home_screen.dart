@@ -243,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: const Icon(Icons.public), label: const Text('Search the whole web'),
       ),
       const SizedBox(height: 8),
-      const Text('Web results open in your browser. Use Add Recipe to keep a recipe link in your cookbook.',
+      Text('Web results open in your browser. Use Add Recipe to keep a recipe link in your cookbook.',
         textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
     ],
   );

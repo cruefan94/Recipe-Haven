@@ -92,7 +92,7 @@ class RecipeSearchService {
       return Recipe(
         id: 'dummyjson:$id', title: '${m['name'] ?? 'Untitled'}',
         source: 'Sample recipe collection', imageUrl: '${m['image'] ?? ''}',
-        category: '${m['mealType'] is List ? (m['mealType'] as List).join(', ') : ''}',
+        category: m['mealType'] is List ? (m['mealType'] as List).join(', ') : '',
         cuisine: '${m['cuisine'] ?? ''}',
         timeMinutes: ((m['prepTimeMinutes'] as num?)?.toInt() ?? 0) + ((m['cookTimeMinutes'] as num?)?.toInt() ?? 0),
         ingredients: ((m['ingredients'] as List?) ?? []).map((e) => '$e').toList(),

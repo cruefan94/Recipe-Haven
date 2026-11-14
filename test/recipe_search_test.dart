@@ -7,13 +7,13 @@ import 'package:recipe_haven/services/recipe_search_service.dart';
 void main() {
   test('same-named recipes from different sources appear separately', () async {
     final api = RecipeSearchService(client: MockClient((request) async {
-      if (request.host == 'www.themealdb.com') {
+      if (request.url.host == 'www.themealdb.com') {
         return http.Response(jsonEncode({'meals': [
           {'idMeal': '7', 'strMeal': 'Chicken Soup', 'strInstructions': 'Simmer for 20 minutes.',
            'strIngredient1': 'Chicken', 'strMeasure1': '1 cup'},
         ]}), 200);
       }
-      if (request.host == 'dummyjson.com') {
+      if (request.url.host == 'dummyjson.com') {
         return http.Response(jsonEncode({'recipes': [
           {'id': 12, 'name': 'Chicken Soup', 'ingredients': ['1 cup chicken'],
            'instructions': ['Bring to a boil.']},

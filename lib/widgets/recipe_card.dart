@@ -24,7 +24,7 @@ class RecipeCard extends StatelessWidget {
               child: SizedBox(
                 width: 90, height: 90,
                 child: recipe.imageUrl.isNotEmpty
-                    ? Image.network(recipe.imageUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => _placeholder(scheme))
+                    ? Image.network(recipe.imageUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => _placeholder(scheme))
                     : _placeholder(scheme),
               ),
             ),

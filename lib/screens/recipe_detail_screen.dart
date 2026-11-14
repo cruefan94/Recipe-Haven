@@ -37,10 +37,14 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     try {
       if (saved) { await widget.cookbook.remove(widget.recipe.id); }
       else { await widget.cookbook.save(widget.recipe); }
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(saved ? 'Removed from cookbook' : 'Saved to your cookbook')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(saved ? 'Removed from cookbook' : 'Saved to your cookbook')));
+      }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not update cookbook.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not update cookbook.')));
+      }
     }
   }
 

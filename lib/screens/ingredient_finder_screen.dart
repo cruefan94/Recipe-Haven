@@ -35,7 +35,7 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
       permission = await Geolocator.requestPermission();
     }
     if (permission == LocationPermission.deniedForever) {
-      throw StateError('Location permission is blocked. Enable it in your phone's app settings.');
+      throw StateError("Location permission is blocked. Enable it in your phone's app settings.");
     }
     if (permission == LocationPermission.denied) {
       throw StateError('Location access is needed to filter stores within 30 km.');
@@ -62,7 +62,7 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
       if (!mounted) return;
       final message = e is StateError ? e.message :
           'The store directory or GPS is unavailable. Try again or open Google Maps.';
-      setState(() => _error = '$message');
+      setState(() => _error = message);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
