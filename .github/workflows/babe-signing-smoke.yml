@@ -3,7 +3,17 @@ name: Babe Stable — Disposable Signing Readiness (No Release)
 on:
   push:
     branches: [feature/ingredient-products-and-cookbook-backup]
+    paths:
+      - scripts/configure_android_flavors.py
+      - scripts/verify_babe_release.sh
+      - scripts/bootstrap_android.sh
+      - .github/workflows/babe-signing-smoke.yml
+      - .github/workflows/android-signed-release.yml
   workflow_dispatch:
+
+concurrency:
+  group: babe-signing-readiness
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -56,6 +66,8 @@ jobs:
           flutter build apk --release --flavor babeStable \
             --dart-define=EDITION=babe --build-name=1.0.0 --build-number="$code"
       - name: Verify certificate and application ID
+        env:
+          RECIPE_HAVEN_DIAG_APKSIGNER: '1'
         run: bash scripts/verify_babe_release.sh build/app/outputs/flutter-apk/app-babestable-release.apk
       - name: Remove disposable signing key
         if: always()
