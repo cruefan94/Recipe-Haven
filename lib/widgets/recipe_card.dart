@@ -10,45 +10,63 @@ class RecipeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return Card(
       clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       child: InkWell(
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(12),
           child: Row(children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
               child: SizedBox(
-                width: 90, height: 90,
+                width: 88, height: 88,
                 child: recipe.imageUrl.isNotEmpty
-                    ? Image.network(recipe.imageUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => _placeholder(scheme))
-                    : _placeholder(scheme),
+                    ? Image.network(recipe.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, trace) =>
+                            _placeholder(colors))
+                    : _placeholder(colors),
               ),
             ),
             const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(recipe.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 6),
-              Text(recipe.source, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-              if (recipe.category.isNotEmpty || recipe.cuisine.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text([recipe.cuisine, recipe.category].where((s) => s.isNotEmpty).join(' • '),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(recipe.title, maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700, height: 1.2)),
+                const SizedBox(height: 6),
+                Text(recipe.source, maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall),
+                if (recipe.category.isNotEmpty ||
+                    recipe.cuisine.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text([recipe.cuisine, recipe.category]
+                      .where((value) => value.isNotEmpty).join(' · '),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall),
+                ],
+                if (recipe.linkOnly) ...[
+                  const SizedBox(height: 4),
+                  Text('Read on original website',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.primary)),
+                ],
               ],
-              if (recipe.linkOnly) Padding(padding: const EdgeInsets.only(top: 5), child: Text('View source to read',
-                style: TextStyle(color: scheme.primary, fontSize: 12))),
-            ])),
+            )),
             IconButton(
               tooltip: isSaved ? 'Remove from cookbook' : 'Save to cookbook',
               onPressed: onToggleSave,
-              icon: Icon(isSaved ? Icons.bookmark : Icons.bookmark_border,
-                color: isSaved ? scheme.primary : scheme.onSurfaceVariant),
+              icon: Icon(isSaved
+                  ? Icons.bookmark_rounded
+                  : Icons.bookmark_border_rounded),
+              color: isSaved ? colors.primary : colors.onSurfaceVariant,
             ),
           ]),
         ),

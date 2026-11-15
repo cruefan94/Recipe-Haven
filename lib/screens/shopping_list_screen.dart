@@ -203,17 +203,33 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
       children: [
-        Text(widget.privateCollectionOnly ? 'Private Shopping List' : 'Your Shopping List',
+        if (widget.privateCollectionOnly)
+          Text('Private Shopping List',
             style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w800)),
-        const SizedBox(height: 7),
-        Text(pending.length.toString() + ' to buy · ' +
-            checked.length.toString() + ' checked'),
-        const SizedBox(height: 10),
-        const Text('Add items manually or open any recipe and choose '
-            'Add ingredients to shopping list. Items are kept on your phone '
-            'so you can use your list offline.'),
-        const SizedBox(height: 15),
+        Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(15),
+            child: Row(children: [
+              Icon(Icons.shopping_basket_outlined,
+                color: theme.colorScheme.primary, size: 28),
+              const SizedBox(width: 13),
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(pending.length.toString() + ' left to buy',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 3),
+                  Text(checked.length.toString() +
+                      ' completed · Available offline',
+                    style: theme.textTheme.bodySmall),
+                ],
+              )),
+            ]),
+          ),
+        ),
         TextField(
           controller: _newItem,
           maxLength: 220,
@@ -250,7 +266,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               style: TextStyle(color: theme.colorScheme.error)),
         ],
         const SizedBox(height: 20),
-        Text('Still needed', style: theme.textTheme.titleMedium?.copyWith(
+        Text('To buy', style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w800)),
         const SizedBox(height: 10),
         if (pending.isEmpty)
@@ -268,9 +284,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           ...checked.map(_itemCard),
         ],
         const SizedBox(height: 15),
-        Text('The list records recipe amounts as written; it does not convert '
-            'different units or confirm store prices or stock. Nearby shopping '
-            'requires location permission only when you search.',
+        Text('Recipe quantities are preserved as entered. '
+            'Verify product prices and availability with the store.',
             style: theme.textTheme.bodySmall),
       ],
     );

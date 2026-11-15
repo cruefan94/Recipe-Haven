@@ -40,6 +40,7 @@ void main() {
     expect(find.text('My Cookbook'), findsWidgets);
     await tester.tap(find.text('Shopping'));
     await tester.pumpAndSettle();
-    expect(find.text('Your Shopping List'), findsOneWidget);
+    expect(find.textContaining('left to buy'), findsOneWidget);
+    expect(find.textContaining('Babe'), findsNothing);
   });
 }
