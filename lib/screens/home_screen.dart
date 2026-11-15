@@ -11,7 +11,7 @@ import 'recipe_detail_screen.dart';
 import 'ingredient_finder_screen.dart';
 import 'ingredient_alternatives_screen.dart';
 import 'pantry_cooking_screen.dart';
-import 'babe_starter_recipes_screen.dart';
+import 'offline_recipes_screen.dart';
 import 'shopping_list_screen.dart';
 import '../services/incoming_recipe_share.dart';
 import '../services/private_cookbook_password.dart';
@@ -530,7 +530,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onFindNearby: _findStoresFor,
             onFindAlternative: _findAlternativesFor,
           ),
-          BabeStarterRecipesScreen(
+          OfflineRecipesScreen(
             cookbook: widget.cookbook, shopping: widget.shopping,
           ),
           _optionsPage(),

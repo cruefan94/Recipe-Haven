@@ -20,7 +20,7 @@ class EditionConfig {
       _ => throw ArgumentError.value(raw, 'EDITION', 'Expected babe or momdad'),
     };
     if (platform == TargetPlatform.iOS && edition == RecipeHavenEdition.babe) {
-      throw UnsupportedError('The Babe edition is Android-only. Build the Mom & Dad edition for iOS.');
+      throw UnsupportedError('This Android-only build cannot run on iOS.');
     }
     return EditionConfig._(edition);
   }

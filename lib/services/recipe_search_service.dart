@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
 import '../models/recipe.dart';
-import '../data/babe_starter_recipes.dart';
+import '../data/offline_recipes.dart';
 
 class SearchResults {
   const SearchResults(this.recipes, this.failedSources);
@@ -242,7 +242,7 @@ class RecipeSearchService {
   /// Complete original starter recipes are available without a connection.
   /// Results are locally filtered using the same strict dish-title matching.
   static List<Recipe> offlineSuggestions(String query) {
-    final found = babeStarterRecipes
+    final found = offlineStarterRecipes
         .where((recipe) => recipeRelevance(recipe, query) > 0)
         .toList();
     found.sort((a, b) {

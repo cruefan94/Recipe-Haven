@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../data/babe_starter_recipes.dart';
+import '../data/offline_recipes.dart';
 import '../models/recipe.dart';
 import '../services/cookbook_store.dart';
 import '../services/shopping_list_store.dart';
 import '../widgets/recipe_card.dart';
 import 'recipe_detail_screen.dart';
 
-/// Browse complete, original recipes packaged with Babe, without any network.
-class BabeStarterRecipesScreen extends StatefulWidget {
-  const BabeStarterRecipesScreen({
+/// Browse complete, original recipes available without a network.
+class OfflineRecipesScreen extends StatefulWidget {
+  const OfflineRecipesScreen({
     super.key,
     required this.cookbook,
     required this.shopping,
@@ -17,11 +17,11 @@ class BabeStarterRecipesScreen extends StatefulWidget {
   final ShoppingListStore shopping;
 
   @override
-  State<BabeStarterRecipesScreen> createState() =>
-      _BabeStarterRecipesScreenState();
+  State<OfflineRecipesScreen> createState() =>
+      _OfflineRecipesScreenState();
 }
 
-class _BabeStarterRecipesScreenState extends State<BabeStarterRecipesScreen> {
+class _OfflineRecipesScreenState extends State<OfflineRecipesScreen> {
   final _filter = TextEditingController();
 
   @override
@@ -69,7 +69,7 @@ class _BabeStarterRecipesScreenState extends State<BabeStarterRecipesScreen> {
   @override
   Widget build(BuildContext context) {
     final q = _filter.text.trim().toLowerCase();
-    final results = babeStarterRecipes.where((recipe) =>
+    final results = offlineStarterRecipes.where((recipe) =>
         q.isEmpty || recipe.title.toLowerCase().contains(q) ||
         recipe.category.toLowerCase().contains(q) ||
         recipe.ingredients.any((item) => item.toLowerCase().contains(q)))

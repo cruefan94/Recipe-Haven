@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
-import '../data/babe_starter_recipes.dart';
+import '../data/offline_recipes.dart';
 import '../services/cookbook_store.dart';
 import '../services/shopping_list_store.dart';
 import '../services/recipe_search_service.dart';
@@ -56,7 +56,7 @@ class _PantryCookingScreenState extends State<PantryCookingScreen> {
   List<PantryRecipeMatch> _rankSaved(List<String> pantry) {
     if (pantry.isEmpty) return const [];
     final candidates = <String, Recipe>{
-      for (final recipe in babeStarterRecipes) recipe.id: recipe,
+      for (final recipe in offlineStarterRecipes) recipe.id: recipe,
       for (final recipe in widget.cookbook.saved)
         if (recipe.collection == RecipeCollection.general &&
             recipe.ingredients.isNotEmpty)

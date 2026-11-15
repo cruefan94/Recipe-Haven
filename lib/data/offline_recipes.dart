@@ -2,7 +2,7 @@ import '../models/recipe.dart';
 
 /// Original offline starter recipes included in Recipe Haven.
 /// Accessible without internet and never presented as third-party content.
-const List<Recipe> babeStarterRecipes = [
+const List<Recipe> offlineStarterRecipes = [
   Recipe(
     id: "babe:starter:chicken-parmesan",
     title: "Chicken Parmesan",

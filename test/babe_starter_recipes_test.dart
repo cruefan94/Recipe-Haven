@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:recipe_haven/data/babe_starter_recipes.dart';
+import 'package:recipe_haven/data/offline_recipes.dart';
 import 'package:recipe_haven/services/recipe_search_service.dart';
 
 void main() {
   test('18 offline recipes all have ingredient lists and instructions', () {
-    expect(babeStarterRecipes, hasLength(18));
-    expect(babeStarterRecipes.map((recipe) => recipe.id).toSet().length, 18);
-    for (final recipe in babeStarterRecipes) {
+    expect(offlineStarterRecipes, hasLength(18));
+    expect(offlineStarterRecipes.map((recipe) => recipe.id).toSet().length, 18);
+    for (final recipe in offlineStarterRecipes) {
       expect(recipe.ingredients, isNotEmpty);
       expect(recipe.steps, isNotEmpty);
       expect(recipe.source, 'Recipe Haven Originals');
