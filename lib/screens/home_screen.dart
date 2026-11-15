@@ -307,68 +307,129 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
+  /// Show everyday tasks first; keep all other tools easy to find below.
   Widget _dashboard() {
     final theme = Theme.of(context);
-    final entries = <({String title, String subtitle, IconData icon, int page})>[
-      (title: 'Find Recipes', subtitle: 'Search and compare versions of your favourite dishes.', icon: Icons.search_rounded, page: 1),
-      (title: 'Offline Recipes', subtitle: '18 complete recipes available without internet.', icon: Icons.menu_book_outlined, page: 10),
-      (title: 'My Cookbook', subtitle: 'Read your saved recipes, including offline instructions.', icon: Icons.bookmark_rounded, page: 2),
-      (title: 'Shopping List', subtitle: widget.shopping.toBuyCount.toString() + ' groceries still to buy. Add recipe ingredients in one tap.', icon: Icons.shopping_cart_outlined, page: 9),
-      (title: 'Add Recipe', subtitle: 'Import a recipe link or write down a family favourite.', icon: Icons.add_circle_outline_rounded, page: 3),
-      (title: 'Find Ingredient', subtitle: 'Find grocery stores within 30 km and open product searches.', icon: Icons.shopping_basket_rounded, page: 5),
-      (title: 'Ingredient Alternatives', subtitle: 'Out of something? See substitute amounts and best uses, even offline.', icon: Icons.swap_horiz_rounded, page: 7),
-      (title: 'Cook With What I Have', subtitle: 'Enter ingredients in your kitchen and find matching meal ideas.', icon: Icons.kitchen_outlined, page: 8),
-      (title: 'Backup & Restore', subtitle: 'Make a copy of all saved recipes or restore a previous cookbook.', icon: Icons.settings_backup_restore_rounded, page: 6),
-      (title: 'Options', subtitle: 'Settings and private cookbook access.', icon: Icons.settings_outlined, page: 11),
+    final savedCount = widget.cookbook.saved
+        .where((recipe) => recipe.collection == RecipeCollection.general)
+        .length;
+    final primary = <({String title, String subtitle, IconData icon, int page})>[
+      (title: 'Find Recipes', subtitle: 'Search by dish name',
+        icon: Icons.search_rounded, page: 1),
+      (title: 'Cook With What I Have', subtitle: 'Use ingredients you already have',
+        icon: Icons.kitchen_outlined, page: 8),
+      (title: 'My Cookbook', subtitle: '$savedCount saved recipes',
+        icon: Icons.bookmark_rounded, page: 2),
+      (title: 'Shopping List', subtitle: '${widget.shopping.toBuyCount} groceries to buy',
+        icon: Icons.shopping_cart_outlined, page: 9),
     ];
-    return ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 28), children: [
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color: theme.colorScheme.primaryContainer,
-          border: Border.all(color: theme.colorScheme.primary.withAlpha(120)),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('RECIPE HAVEN', style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w900, color: theme.colorScheme.onPrimaryContainer)),
-          const SizedBox(height: 8),
-          Text('Everything you need for the kitchen, all in one place.',
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onPrimaryContainer)),
-        ]),
-      ),
-      const SizedBox(height: 22),
-      Text('YOUR KITCHEN', style: theme.textTheme.titleMedium?.copyWith(
-        color: theme.colorScheme.primary, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 12),
-      ...entries.map((entry) => Card(
-        margin: const EdgeInsets.only(bottom: 12),
+    final tools = <({String title, String subtitle, IconData icon, int page})>[
+      (title: 'Offline Recipes', subtitle: '18 complete recipes without internet',
+        icon: Icons.menu_book_outlined, page: 10),
+      (title: 'Add a Recipe', subtitle: 'Import a link or write your own',
+        icon: Icons.add_circle_outline_rounded, page: 3),
+      (title: 'Find Ingredient', subtitle: 'Nearby stores and ingredient searches',
+        icon: Icons.shopping_basket_outlined, page: 5),
+      (title: 'Ingredient Alternatives', subtitle: 'Swap an ingredient you are missing',
+        icon: Icons.swap_horiz_rounded, page: 7),
+      (title: 'Backup & Restore', subtitle: 'Protect recipes and shopping lists',
+        icon: Icons.settings_backup_restore_rounded, page: 6),
+      (title: 'Options', subtitle: 'Settings and private cookbook',
+        icon: Icons.settings_outlined, page: 11),
+    ];
+    Widget primaryCard(
+      ({String title, String subtitle, IconData icon, int page}) item,
+      double width,
+    ) => SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => _navigate(entry.page),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 84),
-            child: Padding(
-              padding: const EdgeInsets.all(15),
-              child: Row(children: [
-                Icon(entry.icon, size: 27, color: theme.colorScheme.primary),
-                const SizedBox(width: 14),
-                Expanded(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(entry.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 4),
-                    Text(entry.subtitle, style: theme.textTheme.bodySmall),
-                  ],
-                )),
-                const SizedBox(width: 10),
-                Icon(Icons.chevron_right_rounded, color: theme.colorScheme.primary),
-              ]),
+          onTap: () => _navigate(item.page),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(item.icon, color: theme.colorScheme.primary, size: 28),
+                const SizedBox(height: 12),
+                Text(item.title, style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(item.subtitle, style: theme.textTheme.bodySmall),
+              ],
             ),
           ),
         ),
-      )),
-    ]);
+      ),
+    );
+
+    return LayoutBuilder(builder: (context, constraints) {
+      final usableWidth = constraints.maxWidth - 32;
+      final cardWidth = usableWidth >= 360
+          ? (usableWidth - 12) / 2
+          : usableWidth;
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Welcome to Recipe Haven',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.w900)),
+                const SizedBox(height: 6),
+                Text('Find something to cook, save your favourites, '
+                  'and organize your groceries.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text('Start cooking', style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800)),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: primary.map((item) =>
+                primaryCard(item, cardWidth)).toList(),
+          ),
+          const SizedBox(height: 22),
+          Text('More kitchen tools', style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          ...tools.map((item) => Card(
+            margin: const EdgeInsets.only(bottom: 7),
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 15, vertical: 5),
+              leading: Icon(item.icon, color: theme.colorScheme.primary),
+              title: Text(item.title, style: const TextStyle(
+                fontWeight: FontWeight.w700)),
+              subtitle: Text(item.subtitle),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => _navigate(item.page),
+            ),
+          )),
+          const SizedBox(height: 14),
+          Text('Your saved recipes and shopping list stay on your device. '
+            'Use Backup & Restore before switching phones.',
+            style: theme.textTheme.bodySmall,
+            textAlign: TextAlign.center),
+        ],
+      );
+    });
   }
 
   @override
@@ -393,10 +454,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   icon: const Icon(Icons.arrow_back_rounded),
                   onPressed: () => _navigate(_page == 12 ? 4 : 0),
                 ),
-          title: Text(pages[_page], style: const TextStyle(fontWeight: FontWeight.w800)),
+          title: Text(_page == 0 ? 'Recipe Haven' : pages[_page],
+            style: const TextStyle(fontWeight: FontWeight.w800)),
+          actions: [
+            if (_page != 11)
+              IconButton(
+                tooltip: 'Options',
+                onPressed: () => _navigate(11),
+                icon: const Icon(Icons.settings_outlined),
+              ),
+          ],
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           centerTitle: false,
         ),
+        bottomNavigationBar: const [0, 1, 2, 9].contains(_page)
+            ? NavigationBar(
+                selectedIndex: const [0, 1, 2, 9].indexOf(_page),
+                onDestinationSelected: (index) =>
+                    _navigate(const [0, 1, 2, 9][index]),
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home_rounded),
+                    label: 'Home',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.search_outlined),
+                    selectedIcon: Icon(Icons.search_rounded),
+                    label: 'Find',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.bookmark_border_rounded),
+                    selectedIcon: Icon(Icons.bookmark_rounded),
+                    label: 'Cookbook',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.shopping_cart_outlined),
+                    selectedIcon: Icon(Icons.shopping_cart_rounded),
+                    label: 'Shopping',
+                  ),
+                ],
+              )
+            : null,
         body: SafeArea(child: IndexedStack(index: _page, children: [
           _dashboard(),
           _discover(),
