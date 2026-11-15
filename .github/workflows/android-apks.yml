@@ -1,4 +1,4 @@
-name: Recipe Haven — Fresh Android APK (Signed Test)
+name: Recipe Haven Professional — Android Test APK
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
           cache: true
       - name: Install dependencies
         run: flutter pub get
-      - name: Generate single-app Android project
+      - name: Prepare Professional and Full Android variants
         run: bash scripts/bootstrap_android.sh
       - name: Flutter static analysis
         run: flutter analyze
@@ -58,7 +58,7 @@ jobs:
           keytool -list -keystore "$key" -alias "$RECIPE_HAVEN_RELEASE_KEY_ALIAS" \
             -storepass:env RECIPE_HAVEN_RELEASE_STORE_PASSWORD >/dev/null
           echo "RECIPE_HAVEN_RELEASE_KEYSTORE=$key" >> "$GITHUB_ENV"
-      - name: Compile new signed Recipe Haven APK
+      - name: Compile signed Professional Android APK
         shell: bash
         env:
           RECIPE_HAVEN_RELEASE_LINT_WORKAROUND: '1'
@@ -68,23 +68,25 @@ jobs:
         run: |
           set -euo pipefail
           version=$((50000 + GITHUB_RUN_NUMBER * 10 + GITHUB_RUN_ATTEMPT))
-          flutter build apk --release --build-name=1.0.0 --build-number="$version"
+          flutter build apk --release --flavor professional \
+            --dart-define=RECIPE_HAVEN_EDITION=professional \
+            --build-name=1.0.0 --build-number="$version"
       - name: Verify package ID and permanent signing certificate
         shell: bash
         env:
           RECIPE_HAVEN_RELEASE_STORE_PASSWORD: ${{ secrets.RECIPE_HAVEN_RELEASE_STORE_PASSWORD }}
           RECIPE_HAVEN_RELEASE_KEY_ALIAS: ${{ secrets.RECIPE_HAVEN_RELEASE_KEY_ALIAS }}
-        run: bash scripts/verify_android_release.sh build/app/outputs/flutter-apk/app-release.apk
+        run: bash scripts/verify_android_release.sh build/app/outputs/flutter-apk/app-professional-release.apk
       - name: Prepare new downloadable APK
         shell: bash
         run: |
           mkdir -p release-test
-          cp build/app/outputs/flutter-apk/app-release.apk \
-            release-test/Recipe-Haven-Android-FRESH-INSTALL.apk
-      - name: Upload fresh-install signed APK
+          cp build/app/outputs/flutter-apk/app-professional-release.apk \
+            release-test/Recipe-Haven-Professional-Android-TEST.apk
+      - name: Upload Professional Android test APK only
         uses: actions/upload-artifact@v4
         with:
-          name: Recipe-Haven-Android-FRESH-INSTALL
+          name: Recipe-Haven-Professional-Android-TEST
           path: release-test/*.apk
           if-no-files-found: error
           retention-days: 30
