@@ -274,6 +274,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Only protected cookbook and protected shopping list retain the unlock.
       if (page != 4 && page != 12) {
         _privateUnlocked = false;
+        _newRecipeCollection = RecipeCollection.general;
         _marijuanaFilter.clear();
       }
       if (page == 3) {
