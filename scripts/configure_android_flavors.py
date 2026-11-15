@@ -101,6 +101,29 @@ android {
 '''
 gradle.write_text(s)
 
+# The observed JavaDoc parser crash is in :url_launcher_android, a library
+# module, so changing only app lint cannot prevent it. Disable only the
+# broken lintVitalAnalyze tasks across projects for CI signing checks.
+# Ordinary local builds and other Gradle/Flutter checks are unaffected.
+root_gradle = root / 'android/build.gradle.kts'
+root_text = root_gradle.read_text()
+if 'RECIPE_HAVEN_CI_LINT_VITAL_TASK_FIX' not in root_text:
+    root_text += '''
+// RECIPE_HAVEN_CI_LINT_VITAL_TASK_FIX
+// Temporary workaround: Flutter 3.50 + AndroidLintWorkAction crashes in
+// a third-party Android library's JavaDocParser. Remove when fixed.
+if (System.getenv("RECIPE_HAVEN_RELEASE_LINT_WORKAROUND") == "1") {
+    subprojects {
+        tasks.configureEach {
+            if (name.startsWith("lintVitalAnalyze")) {
+                enabled = false
+            }
+        }
+    }
+}
+'''
+    root_gradle.write_text(root_text)
+
 m = manifest.read_text()
 m, count = re.subn(r'android:label="[^"]+"', 'android:label="@string/app_name"', m, count=1)
 if count == 0:
