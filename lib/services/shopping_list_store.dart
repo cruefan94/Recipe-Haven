@@ -183,6 +183,32 @@ class ShoppingListStore extends ChangeNotifier {
     }),
   );
 
+  /// Merge imported groceries by stable ID without removing local entries.
+  /// Serialized persistence rolls back the entire batch if saving fails.
+  Future<int> mergeBackupItems(List<ShoppingItem> incoming) => _mutate(() =>
+    _transaction<int>(() {
+      if (incoming.length > maxItems) {
+        throw const FormatException('Backup has too many shopping items.');
+      }
+      final known = _items.map((item) => item.id).toSet();
+      var added = 0;
+      for (final item in incoming) {
+        if (item.id.trim().isEmpty || item.id.length > 500 ||
+            item.text.trim().isEmpty || item.text.length > 600 ||
+            item.sourceRecipe.length > 300 || item.sourceId.length > 500) {
+          throw const FormatException('Backup has an invalid shopping item.');
+        }
+        if (!known.add(item.id)) continue;
+        if (_items.length >= maxItems) {
+          throw const FormatException('Shopping list is full; no items imported.');
+        }
+        _items.add(item);
+        added++;
+      }
+      return added;
+    }),
+  );
+
   String copyText({bool includeChecked = false}) => _items
       .where((item) => includeChecked || !item.checked)
       .map((item) => '- ' + item.text)
