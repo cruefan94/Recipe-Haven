@@ -56,8 +56,11 @@ void main() {
       return http.Response('[]', 200);
     }));
     final result = await api.search('parmesan checking');
-    expect(result.recipes, hasLength(1));
-    expect(result.recipes.single.title, 'Chicken Parmigiana');
+    expect(result.recipes, hasLength(2));
+    expect(result.recipes.map((recipe) => recipe.title),
+        containsAll(['Chicken Parmigiana', 'Chicken Parmesan']));
+    expect(result.recipes.map((recipe) => recipe.title),
+        isNot(contains('Unrelated Lentil Soup')));
     expect(result.failedSources, isEmpty);
     api.dispose();
   });
