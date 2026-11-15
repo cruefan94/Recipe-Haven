@@ -59,8 +59,9 @@ class ShoppingListStore extends ChangeNotifier {
 
   bool get readFailure => _readFailure;
   List<ShoppingItem> get items => List.unmodifiable(_items);
-  int get toBuyCount => _items.where((item) => !item.checked).length;
-  int get checkedCount => _items.where((item) => item.checked).length;
+  int get toBuyCount => _items.where((item) => item.collection == RecipeCollection.general && !item.checked).length;
+  int get checkedCount => _items.where((item) => item.collection == RecipeCollection.general && item.checked).length;
+  int checkedCountFor(String collection) => _items.where((item) => item.collection == collection && item.checked).length;
 
   static Future<ShoppingListStore> load() async {
     final result = ShoppingListStore(SharedPreferencesAsync());
@@ -175,10 +176,10 @@ class ShoppingListStore extends ChangeNotifier {
     }));
   }
 
-  Future<int> clearChecked() => _mutate(() =>
+  Future<int> clearChecked({String collection = RecipeCollection.general}) => _mutate(() =>
     _transaction<int>(() {
       final before = _items.length;
-      _items.removeWhere((item) => item.checked);
+      _items.removeWhere((item) => item.collection == collection && item.checked);
       return before - _items.length;
     }),
   );
@@ -209,8 +210,8 @@ class ShoppingListStore extends ChangeNotifier {
     }),
   );
 
-  String copyText({bool includeChecked = false}) => _items
-      .where((item) => includeChecked || !item.checked)
+  String copyText({bool includeChecked = false, String collection = RecipeCollection.general}) => _items
+      .where((item) => item.collection == collection && (includeChecked || !item.checked))
       .map((item) => '- ' + item.text)
       .join('\n');
 }
