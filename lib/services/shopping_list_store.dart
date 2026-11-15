@@ -140,7 +140,7 @@ class ShoppingListStore extends ChangeNotifier {
     }),
   );
 
-  Future<void> addManual(String text) async {
+  Future<void> addManual(String text, {String collection = RecipeCollection.general}) async {
     await _mutate(() => _transaction<int>(() {
       final line = text.trim();
       if (line.isEmpty || line.length > 220) {
@@ -154,6 +154,7 @@ class ShoppingListStore extends ChangeNotifier {
           (_manualSerial++).toString();
       _items.add(ShoppingItem(
         id: id, text: line, sourceRecipe: 'Added manually',
+        collection: collection,
       ));
       return 0;
     }));
