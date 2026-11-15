@@ -96,18 +96,47 @@ jobs:
             release-test/Recipe-Haven-Professional-Android-TEST.apk
           cp build/app/outputs/flutter-apk/app-full-release.apk \
             release-test/Recipe-Haven-Full-Android-TEST.apk
-      - name: Upload Professional Android test APK
+      - name: Generate and validate edition-specific Word quick-start guides
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "python-docx==1.2.0"
+          python scripts/generate_android_guides.py release-test
+          python - <<'PY'
+          from pathlib import Path
+          from docx import Document
+
+          for edition in ("Professional", "Full"):
+              apk = Path(f"release-test/Recipe-Haven-{edition}-Android-TEST.apk")
+              guide = Path(f"release-test/Recipe-Haven-{edition}-Android-Quick-Start.docx")
+              assert apk.is_file() and apk.stat().st_size > 1000000, apk
+              assert guide.is_file() and guide.stat().st_size > 1000, guide
+              paragraphs = [paragraph.text for paragraph in Document(guide).paragraphs]
+              text = "\n".join(paragraphs)
+              assert "Files by Google" in text and "Install unknown apps" in text
+              assert "Find Ingredient" in text and "Shopping List" in text
+              if edition == "Professional":
+                  assert "Marijuana" not in text
+              else:
+                  assert "Marijuana Cookbook" in text and "at least 8 characters" in text
+              print(f"Verified {edition} APK and Word guide")
+          PY
+      - name: Upload Professional Android APK and matching Word guide
         uses: actions/upload-artifact@v4
         with:
           name: Recipe-Haven-Professional-Android-TEST
-          path: release-test/Recipe-Haven-Professional-Android-TEST.apk
+          path: |
+            release-test/Recipe-Haven-Professional-Android-TEST.apk
+            release-test/Recipe-Haven-Professional-Android-Quick-Start.docx
           if-no-files-found: error
           retention-days: 30
-      - name: Upload Full Android test APK
+      - name: Upload Full Android APK and matching Word guide
         uses: actions/upload-artifact@v4
         with:
           name: Recipe-Haven-Full-Android-TEST
-          path: release-test/Recipe-Haven-Full-Android-TEST.apk
+          path: |
+            release-test/Recipe-Haven-Full-Android-TEST.apk
+            release-test/Recipe-Haven-Full-Android-Quick-Start.docx
           if-no-files-found: error
           retention-days: 30
       - name: Remove private key from runner
