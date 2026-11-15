@@ -1,0 +1,133 @@
+name: Babe Stable — Permanently Signed APK (Manual)
+
+# Default-branch entry point. Must be manually approved by repository owner.
+# The development branch is checked out intentionally; no unreviewed PR input.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_key_backup:
+        description: "I backed up my private Babe signing key and approve this release build"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: babe-permanent-signed-release
+  cancel-in-progress: false
+
+jobs:
+  stable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Confirm owner-approved signed release
+        shell: bash
+        env:
+          APPROVED: ${{ inputs.confirm_key_backup }}
+        run: |
+          if [[ "$APPROVED" != "true" ]]; then
+            echo "::error::Release not approved. Confirm the signing key is privately backed up."
+            exit 1
+          fi
+
+      - name: Checkout Babe Android source
+        uses: actions/checkout@v4
+        with:
+          ref: feature/ingredient-products-and-cookbook-backup
+          persist-credentials: false
+
+      - name: Print exact source commit
+        run: git rev-parse HEAD
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configure Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter dependencies
+        run: flutter pub get
+
+      - name: Generate Android platform and Babe Stable flavor
+        run: bash scripts/bootstrap_android.sh
+
+      - name: Flutter analysis
+        run: flutter analyze
+
+      - name: Flutter tests
+        run: flutter test
+
+      - name: Install reusable private keystore from GitHub Actions Secrets
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RECIPE_HAVEN_RELEASE_KEYSTORE_B64 }}
+          RECIPE_HAVEN_RELEASE_STORE_PASSWORD: ${{ secrets.RECIPE_HAVEN_RELEASE_STORE_PASSWORD }}
+          RECIPE_HAVEN_RELEASE_KEY_ALIAS: ${{ secrets.RECIPE_HAVEN_RELEASE_KEY_ALIAS }}
+          RECIPE_HAVEN_RELEASE_KEY_PASSWORD: ${{ secrets.RECIPE_HAVEN_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_BASE64 RECIPE_HAVEN_RELEASE_STORE_PASSWORD RECIPE_HAVEN_RELEASE_KEY_ALIAS RECIPE_HAVEN_RELEASE_KEY_PASSWORD; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Signing secret is missing: $name. Add it under Settings > Secrets and variables > Actions."
+              exit 1
+            fi
+          done
+          key="$RUNNER_TEMP/babe-permanent-release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$key"
+          chmod 600 "$key"
+          keytool -list -keystore "$key" \
+            -alias "$RECIPE_HAVEN_RELEASE_KEY_ALIAS" \
+            -storepass:env RECIPE_HAVEN_RELEASE_STORE_PASSWORD >/dev/null
+          echo "RECIPE_HAVEN_RELEASE_KEYSTORE=$key" >> "$GITHUB_ENV"
+
+      - name: Compile permanently signed Babe Stable APK
+        shell: bash
+        env:
+          RECIPE_HAVEN_RELEASE_STORE_PASSWORD: ${{ secrets.RECIPE_HAVEN_RELEASE_STORE_PASSWORD }}
+          RECIPE_HAVEN_RELEASE_KEY_ALIAS: ${{ secrets.RECIPE_HAVEN_RELEASE_KEY_ALIAS }}
+          RECIPE_HAVEN_RELEASE_KEY_PASSWORD: ${{ secrets.RECIPE_HAVEN_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          version=$((30000 + GITHUB_RUN_NUMBER * 10 + GITHUB_RUN_ATTEMPT))
+          flutter build apk --release --flavor babeStable \
+            --dart-define=EDITION=babe --build-name=1.0.0 --build-number="$version"
+
+      - name: Verify stable package and permanent certificate
+        shell: bash
+        env:
+          RECIPE_HAVEN_RELEASE_STORE_PASSWORD: ${{ secrets.RECIPE_HAVEN_RELEASE_STORE_PASSWORD }}
+          RECIPE_HAVEN_RELEASE_KEY_ALIAS: ${{ secrets.RECIPE_HAVEN_RELEASE_KEY_ALIAS }}
+        run: |
+          bash scripts/verify_babe_release.sh \
+            build/app/outputs/flutter-apk/app-babestable-release.apk
+
+      - name: Collect signed APK
+        run: |
+          mkdir -p stable-release
+          cp build/app/outputs/flutter-apk/app-babestable-release.apk \
+            stable-release/Babe-STABLE-Permanent-Updates.apk
+
+      - name: Upload private-key-signed Babe Stable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Babe-STABLE-Permanently-Signed-APK
+          path: stable-release/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove signing material from ephemeral runner
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${RECIPE_HAVEN_RELEASE_KEYSTORE:-}" && -f "$RECIPE_HAVEN_RELEASE_KEYSTORE" ]]; then
+            rm -f "$RECIPE_HAVEN_RELEASE_KEYSTORE"
+          fi
