@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'config/edition.dart';
 import 'screens/home_screen.dart';
 import 'services/cookbook_store.dart';
 import 'services/shopping_list_store.dart';
@@ -8,25 +6,23 @@ import 'services/incoming_recipe_share.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final edition = EditionConfig.resolve(platform: defaultTargetPlatform);
   final cookbook = await CookbookStore.load();
   final shopping = await ShoppingListStore.load();
   // A shared browser link is queued until the user opens Add Recipe.
   // iOS ignores this Android-only bridge.
   await IncomingRecipeShare.instance.initialize();
-  runApp(RecipeHavenApp(cookbook: cookbook, shopping: shopping, edition: edition));
+  runApp(RecipeHavenApp(cookbook: cookbook, shopping: shopping));
 }
 
 class RecipeHavenApp extends StatelessWidget {
-  const RecipeHavenApp({super.key, required this.cookbook, required this.shopping, required this.edition});
+  const RecipeHavenApp({super.key, required this.cookbook, required this.shopping});
   final CookbookStore cookbook;
   final ShoppingListStore shopping;
-  final EditionConfig edition;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: edition.appTitle,
+      title: 'Recipe Haven',
       debugShowCheckedModeBanner: false,
       theme: _recipeHavenTheme(),
       // Open directly to the kitchen; no edition-selection or welcome gate.

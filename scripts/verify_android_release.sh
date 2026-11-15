@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Verify Babe Stable package identity AND exact signing-key certificate.
+# Verify Recipe Haven package identity AND exact signing-key certificate.
 set -euo pipefail
 
-apk="${1:?Usage: verify_babe_release.sh PATH_TO_APK}"
+apk="${1:?Usage: verify_android_release.sh PATH_TO_APK}"
 test -s "$apk" || { echo "::error::Stable APK is missing or empty"; exit 1; }
 : "$RECIPE_HAVEN_RELEASE_KEYSTORE"
 : "$RECIPE_HAVEN_RELEASE_STORE_PASSWORD"
@@ -21,12 +21,12 @@ test -n "$signer" && test -n "$aapt" || {
 badging="$("$aapt" dump badging "$apk")"
 package="$(printf '%s\n' "$badging" | grep '^package: ' | head -1)"
 case "$package" in
-  *"name='com.cruefan94.recipe_haven.babe.stable'"*) ;;
-  *) echo "::error::APK is not Babe Stable ($package)"; exit 1 ;;
+  *"name='com.cruefan94.recipe_haven'"*) ;;
+  *) echo "::error::APK is not Recipe Haven ($package)"; exit 1 ;;
 esac
 version="$(printf '%s\n' "$package" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")"
-if [[ -z "$version" || "$version" -le 30000 ]]; then
-  echo "::error::Invalid Babe Stable version code"; exit 1
+if [[ -z "$version" || "$version" -le 50000 ]]; then
+  echo "::error::Invalid Recipe Haven version code"; exit 1
 fi
 
 # Some build-tools versions emit certificate details on stderr rather
@@ -53,5 +53,5 @@ if [[ -z "$actual" || -z "$expected" || "$actual" != "$expected" ]]; then
   exit 1
 fi
 
-echo "Verified Babe Stable package ID, versionCode $version, signed APK and signing certificate."
+echo "Verified Recipe Haven package ID, versionCode $version, signed APK and signing certificate."
 echo "Public signing certificate SHA-256: $actual"

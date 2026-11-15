@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Idempotently configure the Mom & Dad + Babe Android variants."""
+"""Configure one Recipe Haven Android app without editions or flavors."""
 from pathlib import Path
 import re
 
@@ -7,56 +7,11 @@ root = Path(__file__).resolve().parents[1]
 gradle = root / 'android/app/build.gradle.kts'
 manifest = root / 'android/app/src/main/AndroidManifest.xml'
 if not gradle.exists() or not manifest.exists():
-    raise SystemExit('Android scaffold missing. First run: bash scripts/bootstrap_android.sh')
+    raise SystemExit('Android scaffold missing; run bash scripts/bootstrap_android.sh')
 
 s = gradle.read_text()
-# Upgrade early source trees that already used the old "standard" flavor.
-s = s.replace('create("standard")', 'create("momdad")')
-if 'create("babe")' not in s:
-    flavors = '''android {
-    flavorDimensions += "edition"
-    productFlavors {
-        create("momdad") {
-            dimension = "edition"
-        }
-        create("babe") {
-            dimension = "edition"
-            applicationIdSuffix = ".babe"
-        }
-        create("babeStable") {
-            dimension = "edition"
-            applicationIdSuffix = ".babe.stable"
-        }
-        create("babePreview") {
-            dimension = "edition"
-            applicationIdSuffix = ".babe.preview"
-        }
-    }
-'''
-    if 'android {' not in s:
-        raise SystemExit('Unknown Flutter Gradle template; cannot insert product flavors.')
-    s = s.replace('android {', flavors, 1)
-elif 'create("momdad")' not in s:
-    s = s.replace('productFlavors {',
-                  'productFlavors {\n        create("momdad") { dimension = "edition" }', 1)
-# Prepare side-by-side Babe Stable: the installed test app was signed with an
-# ephemeral debug key that cannot be reproduced on later GitHub runners.
-# New app ID preserves the existing installation while the user transfers
-# cookbook JSON to the long-term stable release.
-if 'create("babeStable")' not in s:
-    s = s.replace('productFlavors {',
-                  'productFlavors {\n'
-                  '        create("babeStable") { dimension = "edition"; '
-                  'applicationIdSuffix = ".babe.stable" }', 1)
-
-# A separate preview app ID keeps the user's original Babe APK installed
-# during feature testing. Preview builds are still ephemeral-debug-signed.
-if 'create("babePreview")' not in s:
-    s = s.replace('productFlavors {',
-                  'productFlavors {\n'
-                  '        create("babePreview") { dimension = "edition"; '
-                  'applicationIdSuffix = ".babe.preview" }', 1)
-
+if 'applicationId = "com.cruefan94.recipe_haven"' not in s:
+    raise SystemExit('Unexpected Android application ID: expected com.cruefan94.recipe_haven.')
 # Persistent release signing is optional and never activated for normal debug
 # builds. The keystore remains outside the repository and is supplied by
 # protected GitHub Actions secrets (or a local environment).
@@ -136,7 +91,7 @@ for permission in [
     if permission not in m:
         m = m.replace('<application', f'<uses-permission android:name="{permission}" />\n    <application', 1)
 # Android's Share menu can deliver text/plain recipe URLs directly to
-# either edition. This adds no storage or new dangerous permissions.
+# Recipe Haven. This adds no storage or new dangerous permissions.
 if 'android.intent.action.SEND' not in m:
     if '</activity>' not in m:
         raise SystemExit('Unknown Android manifest template: missing main activity end tag.')
@@ -159,14 +114,9 @@ if not template.is_file():
 target.parent.mkdir(parents=True, exist_ok=True)
 target.write_text(template.read_text())
 
-for flavor, label in [
-    ('momdad', 'For Mom and Dad'),
-    ('babe', 'Recipe Haven'),
-    ('babeStable', 'Recipe Haven'),
-    ('babePreview', 'Recipe Haven Preview (Legacy)'),
-]:
-    strings = root / 'android/app/src' / flavor / 'res/values/strings.xml'
-    strings.parent.mkdir(parents=True, exist_ok=True)
-    strings.write_text('<?xml version="1.0" encoding="utf-8"?>\n'
-                       '<resources><string name="app_name">%s</string></resources>\n' % label)
-print('Android: one public Recipe Haven Stable app; legacy identifiers preserved for update compatibility.')
+
+strings = root / 'android/app/src/main/res/values/strings.xml'
+strings.parent.mkdir(parents=True, exist_ok=True)
+strings.write_text('<?xml version="1.0" encoding="utf-8"?>\n'
+                   '<resources><string name="app_name">Recipe Haven</string></resources>\n')
+print('Recipe Haven Android single app: com.cruefan94.recipe_haven')
