@@ -29,8 +29,12 @@ if [[ -z "$version" || "$version" -le 30000 ]]; then
   echo "::error::Invalid Babe Stable version code"; exit 1
 fi
 
-verify_output="$("$signer" verify --verbose --print-certs "$apk")"
-actual="$(printf '%s\n' "$verify_output" | awk '/Signer #1 certificate SHA-256 digest:/ { print $NF; exit }')"
+# Some build-tools versions emit certificate details on stderr rather
+# than stdout; capture both streams and match the hash by field name.
+verify_output="$("$signer" verify --verbose --print-certs "$apk" 2>&1)"
+actual="$(printf '%s\n' "$verify_output" |
+  sed -nE 's/.*[Cc]ertificate SHA-256 digest:[[:space:]]*([[:xdigit:]]{64}).*/\1/p' |
+  head -1 | tr '[:upper:]' '[:lower:]')"
 expected="$(keytool -list -v \
   -keystore "$RECIPE_HAVEN_RELEASE_KEYSTORE" \
   -alias "$RECIPE_HAVEN_RELEASE_KEY_ALIAS" \
@@ -38,6 +42,10 @@ expected="$(keytool -list -v \
   | awk -F 'SHA256: ' '/SHA256:/ {print $2; exit}' \
   | tr -d ':\r' | tr '[:upper:]' '[:lower:]')"
 # Certificate hashes are public; logging them helps diagnose signer selection.
+if [[ -z "$actual" && "${RECIPE_HAVEN_DIAG_APKSIGNER:-}" == "1" ]]; then
+  echo "Diagnostic output from apksigner (no private key material):"
+  printf '%s\n' "$verify_output" | head -15
+fi
 echo "APK public certificate SHA-256: $actual"
 echo "Keystore public certificate SHA-256: $expected"
 if [[ -z "$actual" || -z "$expected" || "$actual" != "$expected" ]]; then
