@@ -47,9 +47,15 @@ class NearbyStore {
 }
 
 class NearbyStoreResults {
-  const NearbyStoreResults({required this.stores, required this.provider});
+  const NearbyStoreResults({
+    required this.stores, required this.provider,
+    this.requestedRadiusKm = 30, this.searchedRadiusKm = 30,
+  });
   final List<NearbyStore> stores;
   final String provider;
+  final double requestedRadiusKm;
+  final double searchedRadiusKm;
+  bool get isPartial => searchedRadiusKm < requestedRadiusKm;
 }
 
 class StoreLocator {
@@ -58,35 +64,47 @@ class StoreLocator {
         _overpassEndpoints = overpassEndpoints ?? [
           Uri.parse('https://overpass.private.coffee/api/interpreter'),
           Uri.parse('https://overpass-api.de/api/interpreter'),
+          Uri.parse('https://lz4.overpass-api.de/api/interpreter'),
         ];
   final http.Client _client;
   final List<Uri> _overpassEndpoints;
   static const double radiusKm = 30;
+  static const double minRadiusKm = 1;
+  static const double maxRadiusKm = 50;
   static const String _workerUrl = String.fromEnvironment('STORE_LOOKUP_URL');
 
   /// Only called after the user presses Find Nearby Stores and grants location.
-  Future<NearbyStoreResults> nearby(double latitude, double longitude, {String ingredient = ''}) async {
+  Future<NearbyStoreResults> nearby(double latitude, double longitude, {
+    String ingredient = '', double searchRadiusKm = radiusKm,
+  }) async {
     if (!latitude.isFinite || !longitude.isFinite || latitude.abs() > 90 || longitude.abs() > 180) {
       throw const FormatException('Invalid device coordinates');
     }
+    if (!searchRadiusKm.isFinite || searchRadiusKm < minRadiusKm ||
+        searchRadiusKm > maxRadiusKm) {
+      throw const FormatException('Choose a radius between 1 and 50 km.');
+    }
     if (_workerUrl.isNotEmpty) {
       try {
-        return await _googleWorker(latitude, longitude, ingredient.trim());
+        return await _googleWorker(latitude, longitude,
+            ingredient.trim(), searchRadiusKm);
       } catch (_) {
         // A provider outage should not prevent a basic community-map search.
       }
     }
-    return _openStreetMap(latitude, longitude);
+    return _openStreetMap(latitude, longitude, searchRadiusKm);
   }
 
-  Future<NearbyStoreResults> _googleWorker(double lat, double lon, String ingredient) async {
+  Future<NearbyStoreResults> _googleWorker(
+      double lat, double lon, String ingredient, double searchRadiusKm) async {
     final origin = Uri.tryParse(_workerUrl);
     if (origin == null || origin.scheme != 'https' || origin.host.isEmpty) {
       throw const FormatException('STORE_LOOKUP_URL must be an HTTPS endpoint');
     }
     final uri = origin.replace(queryParameters: {
       ...origin.queryParameters,
-      'lat': '$lat', 'lon': '$lon', 'radius': '30000',
+      'lat': '$lat', 'lon': '$lon',
+      'radius': (searchRadiusKm * 1000).round().toString(),
       'ingredient': ingredient.length > 120 ? ingredient.substring(0, 120) : ingredient,
     });
     final response = await _client.get(uri).timeout(const Duration(seconds: 16));
@@ -102,7 +120,7 @@ class StoreLocator {
       final name = (item['name'] as String? ?? '').trim();
       if (name.isEmpty) continue;
       final distance = distanceKm(lat, lon, pointLat, pointLon);
-      if (distance > radiusKm) continue;
+      if (distance > searchRadiusKm) continue;
       stores.add(NearbyStore(
         id: 'google:${item['id'] ?? name}', name: name,
         latitude: pointLat, longitude: pointLon, distanceKm: distance,
@@ -114,7 +132,9 @@ class StoreLocator {
       ));
     }
     stores.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-    return NearbyStoreResults(stores: stores, provider: 'Google Places');
+    return NearbyStoreResults(
+      stores: stores, provider: 'Google Places',
+      requestedRadiusKm: searchRadiusKm, searchedRadiusKm: searchRadiusKm);
   }
 
   /// Optional worker product fields; missing price or stock stays unknown.
@@ -151,11 +171,24 @@ class StoreLocator {
   }
 
   /// Do not silently equate an HTTP error with a lack of grocery stores.
-  Future<NearbyStoreResults> _openStreetMap(double lat, double lon) async {
-    final around = '30000,${lat.toStringAsFixed(6)},${lon.toStringAsFixed(6)}';
+  Future<NearbyStoreResults> _openStreetMap(
+      double lat, double lon, double requestedKm) async {
+    try {
+      return await _queryOverpass(lat, lon, requestedKm, requestedKm);
+    } catch (_) {
+      if (requestedKm <= 10) rethrow;
+      // A smaller query is less likely to overload public community servers.
+      // Results must be explicitly labelled as a PARTIAL area search.
+      return _queryOverpass(lat, lon, 10, requestedKm);
+    }
+  }
+
+  Future<NearbyStoreResults> _queryOverpass(
+      double lat, double lon, double searchedKm, double requestedKm) async {
+    final around = '${(searchedKm * 1000).round()},${lat.toStringAsFixed(6)},${lon.toStringAsFixed(6)}';
     const shopTypes =
         'supermarket|grocery|convenience|greengrocer|general|organic|deli|farm';
-    final query = '[out:json][timeout:18];'
+    final query = '[out:json][timeout:14];'
         '(nwr["shop"~"^($shopTypes)\$"](around:$around););'
         'out center 600;';
     Object? lastFailure;
@@ -170,13 +203,17 @@ class StoreLocator {
             'User-Agent': 'RecipeHaven/0.2 (https://github.com/cruefan94/Recipe-Haven)',
           },
           body: {'data': query},
-        ).timeout(const Duration(seconds: 21));
+).timeout(const Duration(seconds: 16));
         if (response.statusCode != 200) {
           throw StateError('Store directory HTTP ${response.statusCode}');
         }
         final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         if (decoded is! Map || decoded['elements'] is! List) {
           throw const FormatException('Invalid store directory response.');
+        }
+        if (decoded['remark'] is String &&
+            (decoded['remark'] as String).isNotEmpty) {
+          throw StateError('Store directory timed out.');
         }
         final stores = <NearbyStore>[];
         final seen = <String>{};
@@ -194,7 +231,7 @@ class StoreLocator {
             continue;
           }
           final distance = distanceKm(lat, lon, pointLat, pointLon);
-          if (distance > radiusKm) continue;
+          if (distance > searchedKm) continue;
           final id = 'osm:${item['type']}:${item['id']}';
           if (!seen.add(id)) continue;
           final streetAddress = [
@@ -209,7 +246,8 @@ class StoreLocator {
         }
         stores.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
         final result = NearbyStoreResults(
-          stores: stores, provider: 'OpenStreetMap (${endpoint.host})');
+          stores: stores, provider: 'OpenStreetMap (${endpoint.host})',
+          requestedRadiusKm: requestedKm, searchedRadiusKm: searchedKm);
         if (stores.isNotEmpty) return result;
         emptyResult ??= result;
       } catch (error) {
