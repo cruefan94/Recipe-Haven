@@ -265,7 +265,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _toggleSave(Recipe recipe) async {
     if (!widget.includePrivateCollection &&
-        recipe.collection != RecipeCollection.general) return;
+        recipe.collection != RecipeCollection.general) {
+      return;
+    }
     try {
       if (widget.cookbook.contains(recipe.id)) {
         await widget.cookbook.remove(recipe.id);
@@ -281,7 +283,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _open(Recipe recipe) {
     if (recipe.collection == RecipeCollection.marijuana &&
-        (!widget.includePrivateCollection || !_privateUnlocked)) return;
+        (!widget.includePrivateCollection || !_privateUnlocked)) {
+      return;
+    }
     Navigator.push(context, MaterialPageRoute<void>(builder: (_) =>
       RecipeDetailScreen(recipe: recipe, cookbook: widget.cookbook,
         shopping: widget.shopping)));
@@ -289,7 +293,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _navigate(int page) {
     if ((page == 4 || page == 12) &&
-        (!widget.includePrivateCollection || !_privateUnlocked)) return;
+        (!widget.includePrivateCollection || !_privateUnlocked)) {
+      return;
+    }
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       // Only protected cookbook and protected shopping list retain the unlock.
