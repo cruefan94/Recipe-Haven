@@ -62,3 +62,9 @@ You can also create the four secrets manually in [GitHub Actions Secrets](https:
 - Preview APKs still use disposable keys and may not update earlier Preview installs.
 - The signed workflow builds source from the feature branch, which remains unmerged into main. Review the branch source before approving a signed release.
 - Do not create another keystore after the first Stable release. Losing the key or password can break update continuity.
+
+## Visible or pasteable password entry
+
+The Termux setup helper now asks whether to use **Visible (V)** or **Hidden (H)** password entry. **Visible is the default**: you can see the characters you type or paste, including when entering or confirming an existing keystore password. You can paste passwords in **both** modes; Hidden only prevents characters from appearing on screen. The script does not print the password again after entry, record it in shell history, or add it to project files.
+
+**Privacy:** Visible passwords may appear in screen recordings, screenshots, Android clipboard history, or to people nearby. Choose Hidden when in public or while sharing your screen. If the password is sensitive, keep it in a password manager and never send it to this chat. The same password must be kept for future Stable APK releases.

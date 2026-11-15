@@ -23,26 +23,53 @@ if ! gh auth status >/dev/null 2>&1; then
   exit 1
 fi
 
+# Visible input echoes characters so users can see and paste a password.
+# Hidden input remains available for privacy. Neither mode puts passwords
+# into shell command history or writes them into repository source.
+echo
+echo "Password entry mode:"
+echo "  V = Visible: characters appear while typing or pasting (default)"
+echo "  H = Hidden: password is still pasteable, but characters are not shown"
+echo "WARNING: Visible passwords may appear in screenshots or screen recordings."
+printf "Choose [V/h]: "
+IFS= read -r password_mode
+case "${password_mode:-V}" in
+  V|v) password_mode="visible" ;;
+  H|h) password_mode="hidden" ;;
+  *) echo "Choose V or H, then rerun the setup."; exit 1 ;;
+esac
+
+read_signing_password() {
+  local prompt="$1"
+  printf '%s' "$prompt"
+  if [[ "$password_mode" == "visible" ]]; then
+    IFS= read -r REPLY
+  else
+    IFS= read -rs REPLY
+    printf '\n'
+  fi
+}
+
 mkdir -p "$key_dir"
 chmod 700 "$key_dir"
 echo "Private key location: $key_file"
 echo "Keep this same file and its password for ALL future Babe Stable updates."
 if [[ -e "$key_file" ]]; then
   echo "Existing key found. Will NOT generate or overwrite it."
-  printf "Existing keystore password (hidden): "
-  IFS= read -rs password
-  printf '\n'
+  read_signing_password "Existing keystore password: "
+  password="$REPLY"
+  unset REPLY
 else
-  printf "Choose NEW signing password (hidden, minimum 12 characters): "
-  IFS= read -rs password
-  printf '\n'
+  read_signing_password "Choose NEW signing password (minimum 12 characters): "
+  password="$REPLY"
+  unset REPLY
   if [[ ${#password} -lt 12 ]]; then
     echo "Password too short."
     exit 1
   fi
-  printf "Repeat signing password (hidden): "
-  IFS= read -rs confirm
-  printf '\n'
+  read_signing_password "Repeat or paste the same signing password: "
+  confirm="$REPLY"
+  unset REPLY
   if [[ "$password" != "$confirm" ]]; then
     echo "Passwords do not match."
     exit 1
@@ -91,4 +118,5 @@ gh secret list -R "$repo"
 echo
 echo "IMPORTANT: Back up the JKS file to trusted ENCRYPTED private storage."
 echo "Store the password separately in a password manager."
+echo "The password was never printed by the script after entry."
 echo "Next: GitHub Actions > Babe Stable - Permanently Signed APK (Manual)"
