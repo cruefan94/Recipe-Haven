@@ -1,79 +1,66 @@
 # Recipe Haven
 
-**One cooking and shopping app. No editions.**
+**Two editions. One cooking platform.** The active product is **Recipe Haven for Android**; iPhone development remains on the roadmap after Android validation.
 
-**Active platform:** Android. All current feature development, on-device testing, bug fixes, downloads and release work target Recipe Haven for Android.
+| Edition | Android launcher name | Cooking features | Separate personal cookbook | Current APK |
+| --- | --- | --- | --- | --- |
+| **Professional** | **Recipe Haven** | Recipes, offline recipes, cookbook, ingredient finder, substitutions, shopping list, backup/restore | **Not included. No visible references or entry points.** | **Next signed APK for phone testing** |
+| **Full** | **Recipe Haven Full** | All Professional features | Includes a separate password-protected personal collection and its shopping list | Separate APK can be built later |
 
-**Future platform:** iPhone / iOS. The same Recipe Haven experience is planned after the Android app is stable. The Flutter source and iOS bootstrap scripts are retained; a signed iPhone IPA, TestFlight release and App Store listing have **not** been created.
+The Professional edition is suitable for workplace and general-purpose cooking contexts. It does not show the Full edition's extra collection in the home screen, Options, recipe entry, backup messaging, or navigation. Importing a backup containing unsupported collection entries is rejected with a neutral message before any data is changed; Professional exports only its everyday recipes and shopping items.
 
-## Features
+**The next downloadable APK is Professional only.** The Full edition remains implemented in shared Flutter source as a distinct Android flavor, but is not included in the next download artifact. Both editions can be installed side by side without mixing their private app storage.
 
-- **Find Recipes:** search recipes from available online sources and filter irrelevant dishes; 18 original step-by-step offline starter recipes are bundled.
-- **My Cookbook:** save complete recipes, links, ingredients and cooking steps for offline use.
-- **Add Recipe:** enter your own recipes or import supported HTTPS pages.
-- **Cook With What I Have:** explore recipes based on pantry ingredients, including offline choices.
-- **Shopping List:** add ingredients or manual grocery items and check them off without internet.
-- **Find Ingredient:** selectable 2, 5, 10, 20, 30 or 50 km grocery-store search; a community-map directory and external Google Maps/retailer search fallbacks. Store listings **do not confirm product availability, inventory, price or size**.
-- **Ingredient Alternatives:** offline suggestions with approximate substitution amounts and limitations.
-- **Backup & Restore:** portable JSON full-kitchen backups, and import of earlier cookbook-only JSON files.
-- **Private Cookbook:** a separate personal collection accessible from Options with a user-set password, not shown on the public home screen.
+## Android identities and signing
 
-The Android UI uses the **Recipe Haven** name, one consistent dark theme, and Home / Find / Cookbook / Shopping navigation.
+- Professional: `com.cruefan94.recipe_haven` — fresh-install package
+- Full: `com.cruefan94.recipe_haven.full` — distinct package for future use
 
-## Fresh Android APK for direct testing
+Both reuse the owner's existing permanent Android signing keystore through protected GitHub Actions secrets. Its contents and passwords are never committed. The build assigns increasing version codes. After the first Professional APK is installed, subsequent Professional builds with the same package ID and signer can be installed as in-place updates. Old experimental installation IDs are no longer distribution targets; Android doesn't migrate data between different package IDs automatically.
 
-The user explicitly requested a fresh installation and reported deleting the previous testing app. There is now **one Android application ID**:
+## Features shared by both editions
 
-`com.cruefan94.recipe_haven`
+- Find Recipes: search online sources with title relevance filtering; see 18 original recipes offline.
+- My Cookbook: save dishes with ingredients and instructions for offline use.
+- Add Recipe: manual input and supported HTTPS recipe link import.
+- Cook With What I Have: discover options using pantry ingredients.
+- Shopping List: add groceries manually or from recipes; check items off offline.
+- Find Ingredient: selectable 2, 5, 10, 20, 30 or 50 km distance, in-app public-store directory, fallback Google Maps and retailer searches; **no verified live product prices or inventory**.
+- Ingredient Alternatives: context-specific offline substitution reference.
+- Backup & Restore: validated full-kitchen JSON file/clipboard transfer; legacy cookbook-only JSON supported.
+- Professional UI: cleaner Material 3 dark theme, Home / Find / Cookbook / Shopping navigation, responsive recipe cards and clearer store/shopping summaries.
 
-Older experimental Android package IDs are no longer release targets. This is a **new installation**, not an in-place update of any old package. Android does not automatically transfer the old app's private storage; only an existing exported JSON backup can be imported. The public-facing label is **Recipe Haven**.
+## Build and test
 
-The workflow [Recipe Haven — Fresh Android APK (Signed Test)](.github/workflows/android-apks.yml) runs on the active development branch. It analyzes, tests, builds one **release-signed** Android APK using the existing owner-supplied GitHub Actions signing secrets, verifies its package ID and public signing certificate, and publishes:
+The automatic [Professional Android APK workflow](.github/workflows/android-apks.yml) is triggered on the Android development branch. It runs Flutter analysis and tests, compiles one **permanently signed Professional APK** and checks its Android package ID and certificate against the existing private keystore before uploading the installer artifact.
 
-**`Recipe-Haven-Android-FRESH-INSTALL.apk`**
+**Download artifact:** `Recipe-Haven-Professional-Android-TEST`, containing `Recipe-Haven-Professional-Android-TEST.apk`.
 
-under the **Recipe-Haven-Android-FRESH-INSTALL** Actions artifact. The keystore and passwords are stored only as GitHub Secrets; they are not checked into Git. The existing permanent key is reused and must **not** be regenerated. Later releases should retain this new package ID and signing certificate for smooth updates.
-
-The first new installer requires Android phone testing before being described as fully verified. Use the app to save recipes, check the shopping list, change the Find Ingredient radius, check nearby-store fallbacks, use backups, and open Offline Recipes.
-
-## Run Android locally
-
-Requires Flutter and the Android SDK:
+Manual Flutter commands after `flutter pub get` and `bash scripts/bootstrap_android.sh`:
 
 ```bash
-flutter pub get
-bash scripts/bootstrap_android.sh
 flutter analyze
 flutter test
-flutter build apk --debug
+flutter build apk --debug --flavor professional --dart-define=RECIPE_HAVEN_EDITION=professional
+flutter build apk --debug --flavor full --dart-define=RECIPE_HAVEN_EDITION=full
 ```
 
-For a signed release, load the owner's permanent signing keystore and password environment variables and run `flutter build apk --release`.
+Production-key-signed release builds require the owner-managed private signing variables. Do not use a disposable debug key when distributing a Professional release with the same package ID.
 
-## Future iPhone roadmap
+The first Professional APK still needs **hands-on Android validation**: startup, cooking and recipe searches, Find Ingredient distance selector, nearby in-app store list, grocery checkoff, recipe saves, file-picker backups and imports. CI compilation does not certify actual device behavior.
 
-The future iPhone release will share the **Recipe Haven** brand and feature set; there will be no separate family or personalized edition.
+## Future iPhone app
 
-Planned steps are adapting platform-specific file import, local storage, external links, sharing and foreground location; then testing on an iPhone, adding Apple privacy disclosures, configuring signing and provisioning, running TestFlight, and preparing for App Store review. Nothing is currently released for iPhone.
+**iOS remains a planned platform, not an active release.** Future iPhone builds should carry the same two-edition product distinction, adapt Flutter screens and shared features to iOS, and complete Xcode signing, real-device testing, privacy review and TestFlight. Neither edition currently has a signed, installable iPhone IPA.
 
-Optional iOS simulator bootstrap on a Mac with Xcode:
+The repository retains an iOS preparation scaffold for future use. On macOS/Xcode, `bash scripts/bootstrap_ios.sh` sets the future shared Recipe Haven iPhone target; no iOS development should delay finishing Android.
 
-```bash
-flutter pub get
-bash scripts/bootstrap_ios.sh
-flutter build ios --simulator --debug --no-codesign
-```
+## Next development priorities
 
-The reserved iOS bundle identifier is `com.cruefan94.recipehaven`, iOS 14.0+. An iOS simulator build is **not** a device-installable IPA.
+1. Test the new Professional APK on a phone, including confirming the excluded feature is absent.
+2. Fix any in-app grocery-store list gaps, keyboard flicker, layout clipping and search issues observed on Android.
+3. Continue polish for professional everyday use and confirm reliable backups.
+4. Preserve permanent-signing continuity for subsequent releases.
+5. Release the Full edition separately after Professional is verified, then pursue iPhone support.
 
-## Roadmap and limitations
-
-1. Complete fresh Android phone installation and feature verification.
-2. Further improve reliability of the in-app store directory, small-screen layout, keyboard behavior and usability.
-3. Integrate authorized retailer product catalogs where available; never invent stock or prices.
-4. Preserve permanent Android signing continuity for future APK upgrades and eventual store distribution.
-5. Develop and test the future unified Recipe Haven iPhone application after Android completion.
-
-All saved recipe and shopping information is local unless explicitly exported or shared. Location is requested only when searching for nearby stores. TheMealDB and other external providers may have commercial licensing restrictions that require review before a broader store launch.
-
-**Active branch:** [Android development](https://github.com/cruefan94/Recipe-Haven/tree/feature/ingredient-products-and-cookbook-backup). The default branch is used for project coordination and the signed-release entry point until the current testing milestone is approved.
+The Recipe Haven project is independent from the user's Flipper and other unrelated repositories.
