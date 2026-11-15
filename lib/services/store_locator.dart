@@ -315,14 +315,20 @@ class StoreLocator {
       if (props is! Map || geometry is! Map) continue;
       final name = (props['name'] as String? ?? '').trim();
       if (name.isEmpty || props['osm_key'] != 'shop' ||
-          !categories.contains(props['osm_value'])) continue;
+          !categories.contains(props['osm_value'])) {
+        continue;
+      }
       final coordinates = geometry['coordinates'];
       if (coordinates is! List || coordinates.length < 2 ||
-          coordinates[0] is! num || coordinates[1] is! num) continue;
+          coordinates[0] is! num || coordinates[1] is! num) {
+        continue;
+      }
       final storeLon = (coordinates[0] as num).toDouble();
       final storeLat = (coordinates[1] as num).toDouble();
       if (!storeLon.isFinite || !storeLat.isFinite ||
-          storeLat.abs() > 90 || storeLon.abs() > 180) continue;
+          storeLat.abs() > 90 || storeLon.abs() > 180) {
+        continue;
+      }
       final distance = distanceKm(lat, lon, storeLat, storeLon);
       if (distance > searchedKm) continue;
       final id = 'osm:${props['osm_type']}:${props['osm_id']}';
