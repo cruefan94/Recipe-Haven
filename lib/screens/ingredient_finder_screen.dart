@@ -10,10 +10,16 @@ class IngredientFinderScreen extends StatefulWidget {
     super.key,
     this.initialIngredient = '',
     this.onFindAlternatives,
+    this.storeLocator,
+    this.positionProvider,
   });
 
   final String initialIngredient;
   final ValueChanged<String>? onFindAlternatives;
+  /// Optional dependencies let tests exercise the actual in-app store list
+  /// without requesting phone location or making live directory calls.
+  final StoreLocator? storeLocator;
+  final Future<Position> Function()? positionProvider;
   @override
   State<IngredientFinderScreen> createState() => _IngredientFinderScreenState();
 }
@@ -25,8 +31,11 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
   void initState() {
     super.initState();
     _ingredient = TextEditingController(text: widget.initialIngredient);
+    _locator = widget.storeLocator ?? StoreLocator();
+    _ownsLocator = widget.storeLocator == null;
   }
-  final _locator = StoreLocator();
+  late final StoreLocator _locator;
+  late final bool _ownsLocator;
   NearbyStoreResults? _found;
   Position? _position;
   bool _busy = false;
@@ -37,7 +46,7 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
   @override
   void dispose() {
     _ingredient.dispose();
-    _locator.dispose();
+    if (_ownsLocator) _locator.dispose();
     super.dispose();
   }
 
@@ -69,7 +78,9 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() { _busy = true; _error = null; _found = null; });
     try {
-      final position = await _getPosition();
+      final position = widget.positionProvider != null
+          ? await widget.positionProvider!()
+          : await _getPosition();
       final results = await _locator.nearby(position.latitude, position.longitude,
         ingredient: _ingredient.text.trim(),
         searchRadiusKm: _radiusKm.toDouble());
