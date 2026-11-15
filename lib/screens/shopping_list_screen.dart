@@ -73,7 +73,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       return;
     }
     await _action(() async {
-      await widget.shopping.addManual(text);
+      await widget.shopping.addManual(text, collection: _collection);
       if (!mounted) return;
       _newItem.clear();
       FocusManager.instance.primaryFocus?.unfocus();
