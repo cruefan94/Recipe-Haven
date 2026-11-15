@@ -156,7 +156,7 @@ class StoreLocator {
     const shopTypes =
         'supermarket|grocery|convenience|greengrocer|general|organic|deli|farm';
     final query = '[out:json][timeout:18];'
-        '(nwr["shop"~"^($shopTypes)\\$"](around:$around););'
+        '(nwr["shop"~"^($shopTypes)\$"](around:$around););'
         'out center 600;';
     Object? lastFailure;
     NearbyStoreResults? emptyResult;
