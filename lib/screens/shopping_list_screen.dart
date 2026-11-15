@@ -14,17 +14,21 @@ class ShoppingListScreen extends StatefulWidget {
     required this.shopping,
     required this.onFindNearby,
     required this.onFindAlternative,
+    this.privateCollectionOnly = false,
   });
 
   final ShoppingListStore shopping;
   final ValueChanged<String> onFindNearby;
   final ValueChanged<String> onFindAlternative;
+  final bool privateCollectionOnly;
 
   @override
   State<ShoppingListScreen> createState() => _ShoppingListScreenState();
 }
 
 class _ShoppingListScreenState extends State<ShoppingListScreen> {
+  String get _collection => widget.privateCollectionOnly
+      ? RecipeCollection.marijuana : RecipeCollection.general;
   final _newItem = TextEditingController();
   bool _busy = false;
 
@@ -78,7 +82,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   }
 
   Future<void> _clearBought() async {
-    if (_busy || widget.shopping.readFailure || widget.shopping.checkedCount == 0) return;
+    if (_busy || widget.shopping.readFailure || widget.shopping.checkedCountFor(_collection) == 0) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
@@ -99,13 +103,13 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     );
     if (confirm != true) return;
     await _action(() async {
-      final count = await widget.shopping.clearChecked();
+      final count = await widget.shopping.clearChecked(collection: _collection);
       _message('Removed ' + count.toString() + ' checked items.');
     });
   }
 
   Future<void> _copy() async {
-    final text = widget.shopping.copyText();
+    final text = widget.shopping.copyText(collection: _collection);
     if (text.isEmpty) {
       _message('You have no unchecked items to copy.');
       return;
@@ -191,7 +195,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   @override
   Widget build(BuildContext context) {
     final shopping = widget.shopping;
-    final all = shopping.items;
+    final all = shopping.items.where((item) => item.collection == _collection).toList();
     final pending = all.where((item) => !item.checked).toList();
     final checked = all.where((item) => item.checked).toList();
     final theme = Theme.of(context);
@@ -199,7 +203,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
       children: [
-        Text('Your Shopping List',
+        Text(widget.privateCollectionOnly ? 'Private Shopping List' : 'Your Shopping List',
             style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w800)),
         const SizedBox(height: 7),
