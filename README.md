@@ -1,76 +1,38 @@
-# Recipe Haven — two editions, shared features
+# Recipe Haven
 
-**Source checkpoint, not a tested or signed release.** The app now presents a clear, Flipper-dashboard-inspired **Kitchen Home** with five dedicated feature cards and a consistent way back. This Flutter project has two personalized editions. Their cooking features are intentionally shared; only their welcome screen, app label and supported platforms differ.
+**One cooking app with two editions: Professional and Full.** Android is the active development platform. An iPhone version is planned for a later milestone.
 
-| Edition | Welcome screen (exact text) | Android | iPhone / iOS |
+| Edition | Purpose | Features | Android identity |
 | --- | --- | --- | --- |
-| **Babe 💛** | `made just for you babe 💛` | Yes | **No** |
-| **For Mom and Dad** | `for mom and dad` | Yes | **Yes, after an iOS build and Apple signing** |
+| **Recipe Haven Professional** | Everyday cooking, home kitchens, professional and workplace settings | Recipe search, offline recipes, personal cookbook, recipe import, pantry cooking, grocery list, ingredient finder, substitutions, JSON backup/restore | `com.cruefan94.recipe_haven` |
+| **Recipe Haven Full** | All cooking tools plus an additional password-protected personal collection | Everything in Professional, with the optional separate cookbook and shopping list | `com.cruefan94.recipe_haven.full` |
 
-Android app identities are separate so both editions can be installed side by side:
+The **Professional** app does **not show, unlock, navigate to, import, or export** Full-only collection entries. It makes no reference to that extra collection in its interface or everyday screens.
 
-- Babe 💛: `com.cruefan94.recipe_haven.babe`
-- For Mom and Dad: `com.cruefan94.recipe_haven` (retains original Standard application's identity)
+## Android build priority
 
-The sole iOS app identity is `com.cruefan94.recipehaven.momdad`. No iOS build for Babe exists in the workflows. The application rejects Babe as a runtime edition on iOS as a defense in depth.
+**Next APK:** a fresh-install, permanently signed **Recipe Haven Professional Android test APK**. Full remains in shared source but is not the next downloadable APK.
 
-## Same features in BOTH editions
+Source and current Android build workflow live on the [Android development branch](https://github.com/cruefan94/Recipe-Haven/tree/feature/ingredient-products-and-cookbook-backup). The [Professional APK workflow](https://github.com/cruefan94/Recipe-Haven/actions) runs static analysis, tests, release-signs the Professional variant with the existing owner-managed signing key, verifies its package name and certificate, and uploads the installation artifact.
 
-1. **Find Recipes** — search for a dish and browse multiple recipe results sourced from TheMealDB, DummyJSON sample recipes and best-effort recipe websites; open wider Google search in the browser.
-2. **My Cookbook** — locally save, read and remove personal recipes. Previously saved ingredient and instruction text works offline.
-3. **Add Recipe** — write a recipe or import a recipe URL, extracting Schema.org Recipe JSON-LD where permitted. A source link is retained where extraction is unavailable.
-4. **Marijuana Cookbook** — a separate saved collection for adult-use cannabis recipes, with its own search and add/import entry. Stored separately from My Cookbook. Keep infused foods labelled and away from children and pets.
-5. **Find Ingredient** — search grocery stores within a *straight-line* 30 km radius using foreground, permission-based GPS and an OpenStreetMap directory fallback. Open the store in Google Maps, get directions, and find the retailer website/product search. Map proximity does NOT verify product stock, size or price.
+The two variants are separate Android package identities. They can coexist without sharing private storage. Preserve the existing permanent key and private backup. Device testing is required before describing a build as production-ready.
 
-The source does not yet provide live store product inventory/size/price aggregation. That needs participating retailer catalog data; links to retailer sites and searches are provided rather than fabricated prices. The optional `STORE_LOOKUP_URL` build-time define supports a properly secured Google Places worker (not included as an operational deployment). For a user's privacy, the app only requests location when searching for stores.
+## What the app does
 
-## Android build (both editions)
+Recipe Haven supports finding recipes, 18 original offline recipes, adding or importing recipes, saving a cookbook, ingredient substitutions, cooking from pantry ingredients, offline shopping lists, adjustable-radius nearby store searches (2–50 km), and validated JSON backups. Retailer stock and prices are not verified without authorized live catalogues.
 
-Requires Flutter SDK and Android SDK. On Linux/macOS/Windows, from this project root:
+Professional will have no extra private-collection menu entry or prompts. Full retains a separate optional password-protected collection.
 
-```bash
-flutter pub get
-bash scripts/bootstrap_android.sh
-flutter analyze
-flutter test
-flutter build apk --debug --flavor babe --dart-define=EDITION=babe
-flutter build apk --debug --flavor momdad --dart-define=EDITION=momdad
-```
+## Future iPhone support
 
-The GitHub workflow **Build Android — Babe and For Mom and Dad** will produce clearly labelled TEST APK artifacts for both editions after a new GitHub repo is created and files are uploaded. These **debug-signed** APKs are not production signed and may not support updating in place across CI runner changes. Preserve a stable release signing key and add backup/export before publishing real releases. Do not commit private keys.
+Future iPhone builds will use the **same Recipe Haven branding** and two-edition model. The Flutter architecture and iOS preparation scripts remain in the development branch, but actual iPhone device testing, Apple signing, TestFlight, App Store review, and a signed IPA have not been completed.
 
-## iPhone / iOS build (For Mom and Dad ONLY)
+The iPhone simulator workflow is **manual-only** and cannot produce an iPhone-installable IPA without Apple signing.
 
-**Requires a Mac running Xcode**, or a macOS GitHub Actions runner. The iOS platform directory is generated by Flutter on a Mac, then configured as **For Mom and Dad** with a dedicated bundle ID and iOS foreground location permission. Babe has no iOS product.
+## Development status
 
-```bash
-flutter pub get
-bash scripts/bootstrap_ios_momdad.sh
-flutter analyze
-flutter test
-flutter build ios --simulator --debug --no-codesign --dart-define=EDITION=momdad
-```
+Android Professional signing/build and user testing come first, followed by Full-edition distribution and later iPhone development. The default branch provides project coordination and manual workflows; the active source changes remain in a draft pull request until reviewed and tested.
 
-The workflow **Build iOS Simulator — For Mom and Dad ONLY** attempts an unsigned simulator compile. Its output is a **simulator-only app**, NOT a download/installable iPhone IPA. To put the app on a real iPhone, configure an Apple signing team and provisioning in Xcode and build/distribute a signed app through Xcode, TestFlight or a permitted distribution method. Typical local device build from a signed Xcode project:
+**Current draft:** [Recipe Haven development PR #1](https://github.com/cruefan94/Recipe-Haven/pull/1).
 
-```bash
-flutter build ios --release --dart-define=EDITION=momdad
-open ios/Runner.xcworkspace
-```
-
-Then set your development team under Runner → Signing & Capabilities, select a connected device or archive and distribute. Real iPhone testing, signed IPA production, and Apple's app review are **outstanding**.
-
-**iOS review caveat:** Apple may scrutinize cannabis-related content. This application currently organizes personal adult-use recipes and does not sell cannabis, but App Store approval is not guaranteed. See [Apple App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/), particularly 1.4.3 and 5.1.1. Keep age suitability and legal compliance in mind before distribution.
-
-## GitHub home
-
-This project belongs in a separate repository at [`cruefan94/Recipe-Haven`](https://github.com/cruefan94/Recipe-Haven). It must not modify or import hardware features or secrets from the Flipper AI projects. See [`docs/FLIPPER_SATELLITE_UI_REFERENCE.md`](docs/FLIPPER_SATELLITE_UI_REFERENCE.md) for the shared design patterns; build workflows remain independent. The source still requires GitHub CI compilation and device testing.
-
-## External API and open-source reference credits
-
-- [TheMealDB](https://www.themealdb.com/api.php) — key `1` is for development/testing; verify production usage and attribution requirements before publication.
-- [DummyJSON recipe API](https://dummyjson.com/docs/recipes) — sample recipes, not an exhaustive recipe search engine.
-- Website WordPress search endpoints are best-effort and may fail or return non-recipe pages.
-- [KitchenOwl](https://github.com/TomBursch/kitchenowl), [recipe-scrapers-webservice](https://github.com/steve192/recipe-scrapers-webservice), and [Chefs-Book-TheMealDB-integration](https://github.com/JustTeRoR/Chefs-Book-TheMealDB-integration-) were studied as public references. **Their application code was not copied.**
-
-All source providers retain their own content rights and terms. Universal search coverage, production catalog integration, cloud backup, full accessibility and user testing, signed Android releases, and signed iOS builds remain incomplete.
+Do not share keystore material or GitHub secret values. Recipe backups can contain personal information; keep them private.

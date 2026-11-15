@@ -1,0 +1,40 @@
+name: Recipe Haven — Future iPhone Simulator (Manual Only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulator:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Recipe Haven development source
+        uses: actions/checkout@v4
+        with:
+          ref: feature/ingredient-products-and-cookbook-backup
+      - name: Configure Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Prepare future iOS target
+        run: bash scripts/bootstrap_ios.sh
+      - name: Static analysis
+        run: flutter analyze
+      - name: Unit tests
+        run: flutter test
+      - name: Compile iPhone simulator app without device signing
+        run: flutter build ios --simulator --debug --no-codesign --dart-define=RECIPE_HAVEN_EDITION=professional
+      - name: Package simulator app
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app Recipe-Haven-iOS-SIMULATOR-ONLY.zip
+      - name: Upload simulator verification artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Recipe-Haven-iOS-SIMULATOR-ONLY
+          path: Recipe-Haven-iOS-SIMULATOR-ONLY.zip
+          retention-days: 14

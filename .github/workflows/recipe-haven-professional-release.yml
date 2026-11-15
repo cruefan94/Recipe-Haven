@@ -1,6 +1,6 @@
-name: Recipe Haven — Android Stable Release (Manual)
+name: Recipe Haven Professional — Signed Release (Manual)
 
-# Default-branch entry point for the one Recipe Haven Android app.
+# Default-branch manual release entry point for Recipe Haven Professional.
 # The development branch is checked out intentionally; no unreviewed PR input.
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: babe-permanent-signed-release
+  group: recipe-haven-professional-permanent-release
   cancel-in-progress: false
 
 jobs:
@@ -81,7 +81,7 @@ jobs:
               exit 1
             fi
           done
-          key="$RUNNER_TEMP/babe-permanent-release.jks"
+          key="$RUNNER_TEMP/recipe-haven-professional-release.jks"
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$key"
           chmod 600 "$key"
           keytool -list -keystore "$key" \
@@ -100,9 +100,10 @@ jobs:
           RECIPE_HAVEN_RELEASE_KEY_PASSWORD: ${{ secrets.RECIPE_HAVEN_RELEASE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          version=$((30000 + GITHUB_RUN_NUMBER * 10 + GITHUB_RUN_ATTEMPT))
-          flutter build apk --release --flavor babeStable \
-            --dart-define=EDITION=babe --build-name=1.0.0 --build-number="$version"
+          version=$((50000 + GITHUB_RUN_NUMBER * 10 + GITHUB_RUN_ATTEMPT))
+          flutter build apk --release --flavor professional \
+            --dart-define=RECIPE_HAVEN_EDITION=professional \
+            --build-name=1.0.0 --build-number="$version"
 
       - name: Verify stable package and permanent certificate
         shell: bash
@@ -110,19 +111,19 @@ jobs:
           RECIPE_HAVEN_RELEASE_STORE_PASSWORD: ${{ secrets.RECIPE_HAVEN_RELEASE_STORE_PASSWORD }}
           RECIPE_HAVEN_RELEASE_KEY_ALIAS: ${{ secrets.RECIPE_HAVEN_RELEASE_KEY_ALIAS }}
         run: |
-          bash scripts/verify_babe_release.sh \
-            build/app/outputs/flutter-apk/app-babestable-release.apk
+          bash scripts/verify_android_release.sh \
+            build/app/outputs/flutter-apk/app-professional-release.apk
 
       - name: Collect signed APK
         run: |
           mkdir -p stable-release
-          cp build/app/outputs/flutter-apk/app-babestable-release.apk \
-            stable-release/Recipe-Haven-Android-STABLE.apk
+          cp build/app/outputs/flutter-apk/app-professional-release.apk \
+            stable-release/Recipe-Haven-Professional-SIGNED.apk
 
       - name: Upload signed Recipe Haven Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: Recipe-Haven-Android-STABLE-APK
+          name: Recipe-Haven-Professional-SIGNED-RELEASE
           path: stable-release/*.apk
           if-no-files-found: error
           retention-days: 30
