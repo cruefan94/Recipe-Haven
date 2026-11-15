@@ -1,33 +1,84 @@
-# Recipe Haven — development checkpoint 2026-11-13
+# Recipe Haven — Android development status
 
-## Current edition policy in source
+**Updated:** 2026-11-15  
+**Project coordination:** Cooking Haven main development hub  
+**Repository:** `cruefan94/Recipe-Haven`  
+**Development branch:** `feature/ingredient-products-and-cookbook-backup`  
+**Open integration:** [Draft PR #1](https://github.com/cruefan94/Recipe-Haven/pull/1)
 
-- **Babe 💛** is Android-only and opens on `made just for you babe 💛`.
-- **For Mom and Dad** opens on `for mom and dad` and targets Android and iPhone/iOS.
-- Both editions share **all five screens**: Find Recipes, My Cookbook, Add Recipe, Marijuana Cookbook, Find Ingredient.
-- The original Standard flavor has been renamed to Mom and Dad but retains the original Android package ID for continuity; Babe has its own package ID. iOS has a distinct Mom and Dad bundle ID.
+## Approved product scope
 
-## Source changes performed
+Recipe Haven is one cooking platform with two separate Android editions:
 
-- Centralized edition rules with iOS-only Mom and Dad validation and specific title strings (`lib/config/edition.dart`).
-- Unified the home screen and marijuana cookbook features in both editions; shared recipe saving, internet search and 30-km ingredient/store search.
-- Added separate Mom and Dad welcome screen in `lib/main.dart`.
-- Added Android Mom and Dad/Babe flavors and clearly named APK workflow (`scripts/configure_android_flavors.py`, `.github/workflows/android-apks.yml`).
-- Added Mac bootstrap script with iOS app display name, stable bundle ID and foreground location description (`scripts/bootstrap_ios_momdad.sh`, `scripts/configure_ios_momdad.py`).
-- Added a **Mom and Dad only** iOS simulator workflow (`.github/workflows/momdad-ios-simulator.yml`).
-- Added edition tests (`test/edition_test.dart`).
+- **Professional** — Android launcher label **Recipe Haven**, package
+  `com.cruefan94.recipe_haven`. Includes the everyday cooking features.
+  No visible references, controls, backup messaging, or access points for the
+  optional private cookbook.
+- **Full** — launcher label **Recipe Haven Full**, package
+  `com.cruefan94.recipe_haven.full`. Includes the Professional features,
+  plus a separate password-protected cookbook and shopping list.
 
-## Verification status
+Do not restore earlier personalized edition branding. The editions have
+independent Android application identities and private local app storage.
+An iPhone version remains on the roadmap **after Android validation**.
 
-- Local Python syntax and script smoke checks may be performed in this workspace.
-- Flutter SDK, Xcode and iOS simulator are unavailable in the current container, so **no Flutter analysis, Dart tests, compiled Android APK, compiled iOS app, phone installation, or Apple-signed IPA is yet independently verified**.
-- Neither live Google Places pricing nor automatic store catalog lookup is implemented. Maps links and retailer-site searches do not certify inventory or prices.
-- No separate GitHub repository is currently connected/created for this app, so the workflows have not run on GitHub.
+## Features in the development source
 
-## Next milestone
+- Online and 18 original offline recipes; recipe detail and saving.
+- My Cookbook; manual recipe creation, URL import, and Android sharing.
+- Pantry/ingredient cooking suggestions; ingredient substitutions.
+- Grocery shopping list.
+- Find Ingredient: selectable **2, 5, 10, 20, 30, 50 km** radius;
+  store directory results shown **inside the app** when available;
+  fallback retailer searches and Maps links.
+- JSON backup and restore with Professional import isolation.
+- Separate Full-only private collection gated behind a user-made password.
+- Material 3 Android layout with dedicated navigation and Options.
 
-Create `cruefan94/Recipe-Haven` separately from the Flipper projects; push this source; run the Android and unsigned iOS simulator GitHub Actions jobs; fix any CI errors; phone-test both editions; set up secure Android signing and real iOS signing/distribution. Review Apple's App Store policies regarding adult cannabis recipes before App Store submission.
+**Provider limitations:** Store directories and map links do not certify
+retailer inventory, product pricing, or completeness. Public directories
+can time out, have missing locations, or supply partial-radius results.
 
-## Flipper Android UI reference integration
+## Build verification
 
-The latest Flipper AI Android Satellite `fix/android-chat-continuity-secure-cloud-settings-v241` branch was inspected as a **design reference only**. Recipe Haven now uses a single dashboard of five cards, dedicated screens, a simple back route, dark/high-contrast surfaces and orange/amber accents. The Flutter codebase remains independent so Mom and Dad can build for iOS. This has not been Flutter-compiled in the current environment.
+The latest confirmed successful signed Professional APK at this checkpoint is
+GitHub Actions [run #66](https://github.com/cruefan94/Recipe-Haven/actions/runs/43764869438)
+(2026-11-15). Flutter analysis, automated tests, release compilation,
+package-ID verification, signing-certificate verification and artifact upload
+all **passed**.
+
+Artifact: `Recipe-Haven-Professional-Android-TEST` containing
+`Recipe-Haven-Professional-Android-TEST.apk`.
+This is a new-install Professional APK; subsequent same-package, same-key
+versions can upgrade in place. **No phone install or hardware test is yet
+claimed.** Full has not been released as the next APK.
+
+A further automated widget regression test is being added for the radius
+selector and visible nearby-store list. Newer workflow runs must be
+independently checked before describing them as successful.
+
+## Immediate Android acceptance checks
+
+1. Install the latest signed Professional APK on the phone.
+2. Confirm correct launcher name and no Full-only controls or labels anywhere.
+3. Test recipe search, 18 offline recipes, saved recipes and manual/link import.
+4. Test ingredient finder at 2 km, 10 km and 50 km with permission accepted;
+   verify that in-app store rows appear if the directory has data, and that
+   empty, partial and provider-outage states are understandable.
+5. Test grocery checkoffs and export/import JSON, including invalid import.
+6. Look for keyboard flicker, scrolling problems, clipping and Android back
+   navigation. Retest after fixes.
+
+## Next implementation priorities
+
+- Follow up on actual phone test observations, especially store availability
+  and grocery-list UX.
+- Preserve permanent Android signing key; do not regenerate or expose secrets.
+- Keep Professional source and release output free of Full-only navigation.
+- Continue professional UI refinement after functional validation.
+- Release the separate Full APK only once Professional is validated.
+- Prepare iOS builds and TestFlight after the Android release is stable.
+
+Older personalized-era documents in `docs/` are historical development
+references, **not** the active product policy. This file and the README
+supersede their prior edition names and release assumptions.
