@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
 import '../models/recipe.dart';
+import '../data/babe_starter_recipes.dart';
 
 class SearchResults {
   const SearchResults(this.recipes, this.failedSources);
@@ -238,6 +239,21 @@ class RecipeSearchService {
     return found.values.toList();
   }
 
+  /// Complete original starter recipes are available without a connection.
+  /// Results are locally filtered using the same strict dish-title matching.
+  static List<Recipe> offlineSuggestions(String query) {
+    final found = babeStarterRecipes
+        .where((recipe) => recipeRelevance(recipe, query) > 0)
+        .toList();
+    found.sort((a, b) {
+      final score = recipeRelevance(b, query)
+          .compareTo(recipeRelevance(a, query));
+      return score != 0 ? score :
+          a.title.toLowerCase().compareTo(b.title.toLowerCase());
+    });
+    return found;
+  }
+
   Future<SearchResults> search(String input) async {
     final query = input.trim();
     if (_recipeTerms(query).isEmpty) return const SearchResults([], []);
@@ -251,7 +267,9 @@ class RecipeSearchService {
       try { return (await f, false); } catch (_) { return (<Recipe>[], true); }
     }));
     final failed = <String>[];
-    final unique = <String, Recipe>{};
+    final unique = <String, Recipe>{
+      for (final local in offlineSuggestions(query)) local.id: local,
+    };
     for (var i = 0; i < results.length; i++) {
       if (results[i].$2) failed.add(sourceNames[i]);
       for (final recipe in results[i].$1) {

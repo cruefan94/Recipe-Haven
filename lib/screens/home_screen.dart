@@ -11,6 +11,7 @@ import 'recipe_detail_screen.dart';
 import 'ingredient_finder_screen.dart';
 import 'ingredient_alternatives_screen.dart';
 import 'pantry_cooking_screen.dart';
+import 'babe_starter_recipes_screen.dart';
 import 'shopping_list_screen.dart';
 import '../services/incoming_recipe_share.dart';
 
@@ -92,7 +93,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final request = ++_searchSequence;
     FocusManager.instance.primaryFocus?.unfocus();
     _search.text = query;
-    setState(() { _page = 1; _loading = true; _searched = query; _failed = []; });
+    final local = RecipeSearchService.offlineSuggestions(query);
+    setState(() {
+      _page = 1;
+      _loading = true;
+      _searched = query;
+      _failed = [];
+      // Let people open offline recipes immediately while web sources load.
+      _results = local;
+    });
     try {
       final data = await _api.search(query);
       if (!mounted || request != _searchSequence) return;
@@ -155,6 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = Theme.of(context);
     final entries = <({String title, String subtitle, IconData icon, int page})>[
       (title: 'Find Recipes', subtitle: 'Search and compare versions of your favourite dishes.', icon: Icons.search_rounded, page: 1),
+      (title: 'Babe Quick Recipes', subtitle: '18 original step-by-step recipes you can use without internet.', icon: Icons.menu_book_outlined, page: 10),
       (title: 'My Cookbook', subtitle: 'Read your saved recipes, including offline instructions.', icon: Icons.bookmark_rounded, page: 2),
       (title: 'Shopping List', subtitle: widget.shopping.toBuyCount.toString() + ' groceries still to buy. Add recipe ingredients in one tap.', icon: Icons.shopping_cart_outlined, page: 9),
       (title: 'Add Recipe', subtitle: 'Import a recipe link or write down a family favourite.', icon: Icons.add_circle_outline_rounded, page: 3),
@@ -220,6 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'Kitchen Home', 'Find Recipes', 'My Cookbook', 'Add Recipe',
       'Marijuana Cookbook', 'Find Ingredient', 'Backup & Restore',
       'Ingredient Alternatives', 'Cook With What I Have', 'Shopping List',
+      'Babe Quick Recipes',
     ];
     return PopScope(
       canPop: _page == 0,
@@ -270,6 +281,9 @@ class _HomeScreenState extends State<HomeScreen> {
             shopping: widget.shopping,
             onFindNearby: _findStoresFor,
             onFindAlternative: _findAlternativesFor,
+          ),
+          BabeStarterRecipesScreen(
+            cookbook: widget.cookbook, shopping: widget.shopping,
           ),
         ])),
       ),
@@ -467,10 +481,18 @@ class _HomeScreenState extends State<HomeScreen> {
       Wrap(spacing: 8, runSpacing: 6, children: ['Pasta', 'Chicken', 'Pizza', 'Soup', 'Chocolate cake']
         .map((term) => ActionChip(label: Text(term), onPressed: () => _find(term))).toList()),
       const SizedBox(height: 18),
-      if (_loading) const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+      if (_loading && _results.isEmpty)
+        const Padding(padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator()))
       else if (_searched.isEmpty) _empty(Icons.restaurant_menu, 'Search different recipes', 'Browse versions from different recipe sources and save your favourites.')
       else ...[
         Text('${_results.length} results for “$_searched”', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        if (_loading) ...[
+          const SizedBox(height: 8),
+          const LinearProgressIndicator(),
+          const SizedBox(height: 5),
+          const Text('Showing offline recipes while more sources load...'),
+        ],
         const SizedBox(height: 10),
         if (_failed.isNotEmpty) Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -484,6 +506,12 @@ class _HomeScreenState extends State<HomeScreen> {
         )),
       ],
       const SizedBox(height: 14),
+      OutlinedButton.icon(
+        onPressed: () => _navigate(10),
+        icon: const Icon(Icons.menu_book_outlined),
+        label: const Text('Browse all 18 offline Babe recipes'),
+      ),
+      const SizedBox(height: 8),
       OutlinedButton.icon(
         onPressed: () async {
           final query = Uri.encodeQueryComponent(_search.text.trim().isEmpty ? 'recipes' : '${_search.text.trim()} recipe');

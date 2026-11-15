@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
+import '../data/babe_starter_recipes.dart';
 import '../services/cookbook_store.dart';
 import '../services/shopping_list_store.dart';
 import '../services/recipe_search_service.dart';
@@ -54,10 +55,14 @@ class _PantryCookingScreenState extends State<PantryCookingScreen> {
 
   List<PantryRecipeMatch> _rankSaved(List<String> pantry) {
     if (pantry.isEmpty) return const [];
-    final matches = widget.cookbook.saved
-        .where((recipe) =>
-            recipe.collection == RecipeCollection.general &&
+    final candidates = <String, Recipe>{
+      for (final recipe in babeStarterRecipes) recipe.id: recipe,
+      for (final recipe in widget.cookbook.saved)
+        if (recipe.collection == RecipeCollection.general &&
             recipe.ingredients.isNotEmpty)
+          recipe.id: recipe,
+    };
+    final matches = candidates.values
         .map((recipe) => RecipeSearchService.scorePantry(recipe, pantry))
         .where((result) => result.matched > 0)
         .toList();
@@ -238,12 +243,12 @@ class _PantryCookingScreenState extends State<PantryCookingScreen> {
         ],
         if (_terms.isNotEmpty) ...[
           const SizedBox(height: 20),
-          Text('From My Cookbook (available offline)',
+          Text('Cookbook + Babe originals (available offline)',
               style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           if (_savedMatches.isEmpty)
-            const Text('No matching saved recipes with ingredient lists yet.'),
+            const Text('No matching saved or built-in recipes found for these ingredients.'),
           ..._savedMatches.map(_recipeMatch),
           const SizedBox(height: 18),
           Text(_offlineOnly ? 'Offline search' : 'Discover more recipes online',

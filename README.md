@@ -134,3 +134,8 @@ The Babe TEST APKs from earlier GitHub Actions runs are signed with different de
 ### Babe full kitchen backup — major milestone
 
 Babe now has a **Full Kitchen Backup** feature that saves both recipe collections **and** the separate shopping list (including purchased/checkoff status) to one versioned JSON file. It supports restoring that file or clipboard text by merging IDs without deleting older saved entries. Earlier `recipe-haven-cookbook` format files remain importable; those contain recipes only. The export is private and user-initiated, with no background sync or external account. A storage write error can cause a **partial import of recipes before groceries**; the UI states this explicitly, and reimporting the same file is safe because existing IDs are retained. This makes safe migration from old Babe test APK to side-by-side Babe Stable more practical. See `docs/babe-full-kitchen-backup.md`.
+
+
+### Babe Quick Recipes — fully offline
+
+Babe now bundles **18 original recipes with ingredients and step-by-step instructions** (including Chicken Parmesan, garlic Parmesan pasta, tacos, pancakes, banana bread, and stir-fries). The **Babe Quick Recipes** screen lists all of them without requiring internet, and both regular Find Recipes and Cook With What I Have can suggest them locally before fetching online options. These are original starter recipes, not copies from recipe websites or substitutes for nutritional/allergen advice. Regression tests cover offline search and complete recipe data.
