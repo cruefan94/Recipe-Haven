@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/cookbook_file_service.dart';
+import '../services/kitchen_backup_service.dart';
 import '../models/recipe.dart';
 import '../services/cookbook_store.dart';
 import '../services/shopping_list_store.dart';
@@ -276,22 +276,43 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _restoreMessage(KitchenImportResult result) {
+    final recipes = result.recipesAdded.toString();
+    if (result.legacyCookbook) {
+      return 'Older cookbook backup loaded: ' + recipes +
+          ' recipes added. This file did not contain shopping items.';
+    }
+    return recipes + ' recipes and ' +
+        result.shoppingItemsAdded.toString() +
+        ' shopping items added. Your existing data was kept.';
+  }
+
   Future<void> _copyBackup() async {
+    if (_fileTransferBusy) return;
+    setState(() => _fileTransferBusy = true);
     try {
-      await Clipboard.setData(ClipboardData(text: widget.cookbook.exportBackup()));
-      _notice('Backup copied. Save it in a private note before switching phones.');
+      final data = KitchenBackupService.exportData(
+        widget.cookbook, widget.shopping);
+      await Clipboard.setData(ClipboardData(text: data));
+      _notice('Full kitchen backup copied. Save it somewhere private.');
+    } on FormatException catch (error) {
+      _notice(error.message.toString());
     } catch (_) {
-      _notice('Unable to copy your cookbook right now.');
+      _notice('Could not copy your backup. Existing data is unchanged.');
+    } finally {
+      if (mounted) setState(() => _fileTransferBusy = false);
     }
   }
 
-  Future<void> _restoreBackup() async {
+  Future<bool> _confirmRestore() async {
     final approved = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: const Text('Restore recipes from clipboard?'),
-        content: const Text('This merges recipes from a Recipe Haven backup. '
-          'Existing saved recipes are never deleted or replaced.'),
+        title: const Text('Restore your kitchen backup?'),
+        content: const Text('This imports recipes and shopping items from a '
+          'Babe backup file. Existing entries will stay unchanged. '
+          'Older recipe-only backups are also accepted. '
+          'Choose only files from a source you trust.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialog, false),
@@ -299,26 +320,43 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('Restore recipes'),
+            child: const Text('Restore'),
           ),
         ],
       ),
     );
-    if (approved != true || !mounted) return;
+    return approved == true;
+  }
+
+  void _restoreError(Object error) {
+    if (error is PartialKitchenImportException) {
+      _notice(error.recipesAdded.toString() +
+          ' recipes added, but shopping items could not be saved. '
+          'Retry the same backup safely after fixing storage.');
+    } else if (error is FormatException) {
+      _notice(error.message.toString());
+    } else {
+      _notice('Restore failed. Check available storage and try again. '
+          'Your existing entries were not deleted.');
+    }
+  }
+
+  Future<void> _restoreBackup() async {
+    if (_fileTransferBusy || !await _confirmRestore() || !mounted) return;
+    setState(() => _fileTransferBusy = true);
     try {
-      final value = (await Clipboard.getData('text/plain'))?.text;
-      if (value == null || value.trim().isEmpty) {
-        _notice('Clipboard is empty. Copy a Recipe Haven backup first.');
+      final text = (await Clipboard.getData('text/plain'))?.text;
+      if (text == null || text.trim().isEmpty) {
+        _notice('Clipboard is empty. Copy a Babe backup first.');
         return;
       }
-      final imported = await widget.cookbook.mergeBackup(value);
-      _notice(imported == 0
-          ? 'All backup recipes are already saved.'
-          : '$imported recipes restored successfully.');
-    } on FormatException catch (e) {
-      _notice(e.message.toString());
-    } catch (_) {
-      _notice('Unable to restore backup. Existing recipes are unchanged.');
+      final result = await KitchenBackupService.importData(
+        text, widget.cookbook, widget.shopping);
+      _notice(_restoreMessage(result));
+    } catch (error) {
+      _restoreError(error);
+    } finally {
+      if (mounted) setState(() => _fileTransferBusy = false);
     }
   }
 
@@ -326,50 +364,29 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_fileTransferBusy) return;
     setState(() => _fileTransferBusy = true);
     try {
-      final saved = await CookbookFileService.saveBackup(widget.cookbook);
-      if (mounted && saved) _notice('Backup saved. Keep your JSON file private.');
-    } on FormatException catch (e) {
-      _notice(e.message.toString());
+      final saved = await KitchenBackupService.saveFile(
+        widget.cookbook, widget.shopping);
+      if (saved) {
+        _notice('Full kitchen backup saved. Keep this file private.');
+      }
+    } on FormatException catch (error) {
+      _notice(error.message.toString());
     } catch (_) {
-      _notice('Could not save JSON file. You can still copy the backup.');
+      _notice('Could not save the backup file. Nothing was removed.');
     } finally {
       if (mounted) setState(() => _fileTransferBusy = false);
     }
   }
 
   Future<void> _restoreBackupFile() async {
-    if (_fileTransferBusy) return;
-    final approved = await showDialog<bool>(
-      context: context,
-      builder: (dialog) => AlertDialog(
-        title: const Text('Import your cookbook?'),
-        content: const Text('Select a Recipe Haven JSON backup. '
-          'Recipes will be merged and existing recipes will not be deleted. '
-          'Only import a file you trust.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialog, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('Choose JSON file'),
-          ),
-        ],
-      ),
-    );
-    if (approved != true || !mounted) return;
+    if (_fileTransferBusy || !await _confirmRestore() || !mounted) return;
     setState(() => _fileTransferBusy = true);
     try {
-      final count = await CookbookFileService.restoreBackup(widget.cookbook);
-      if (mounted && count != null) {
-        _notice(count == 0 ? 'All backup recipes are already saved.'
-            : '$count recipes imported. Your existing recipes were kept.');
-      }
-    } on FormatException catch (e) {
-      _notice(e.message.toString());
-    } catch (_) {
-      _notice('Could not import the backup. Existing recipes were not deleted.');
+      final result = await KitchenBackupService.restoreFile(
+        widget.cookbook, widget.shopping);
+      if (result != null) _notice(_restoreMessage(result));
+    } catch (error) {
+      _restoreError(error);
     } finally {
       if (mounted) setState(() => _fileTransferBusy = false);
     }
@@ -378,43 +395,56 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _backupPage() => ListView(
     padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
     children: [
-      Text('Protect your saved recipes',
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+      Text('Protect your whole kitchen',
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold)),
       const SizedBox(height: 10),
-      const Text('Back up both My Cookbook and Marijuana Cookbook together. '
-        'Saved recipes include ingredients, cooking steps and source links.'),
+      const Text('One private JSON backup includes both saved recipe '
+          'collections, ingredient lists, cooking steps, and your shopping '
+          'list with checked items. Use this before switching to Babe Stable.'),
+      const SizedBox(height: 12),
+      Text(widget.cookbook.saved.length.toString() +
+          ' saved recipes  •  ' +
+          widget.shopping.items.length.toString() + ' shopping items',
+          style: Theme.of(context).textTheme.titleMedium),
       const SizedBox(height: 20),
       FilledButton.icon(
         onPressed: _fileTransferBusy ? null : _saveBackupFile,
         icon: const Icon(Icons.save_alt_rounded),
-        label: const Text('Save cookbook to JSON file'),
+        label: const Text('Save Full Kitchen Backup'),
       ),
       const SizedBox(height: 12),
       OutlinedButton.icon(
         onPressed: _fileTransferBusy ? null : _restoreBackupFile,
         icon: const Icon(Icons.file_open_rounded),
-        label: const Text('Import cookbook from JSON file'),
+        label: const Text('Import Kitchen Backup File'),
       ),
-      const SizedBox(height: 22),
-      Text('Clipboard transfer (for smaller cookbooks)',
+      const SizedBox(height: 20),
+      Text('Clipboard transfer (smaller backups)',
         style: Theme.of(context).textTheme.titleMedium),
-      const SizedBox(height: 12),
-      FilledButton.icon(
-        onPressed: _copyBackup,
-        icon: const Icon(Icons.copy_all_rounded),
-        label: const Text('Copy cookbook backup'),
-      ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 10),
       OutlinedButton.icon(
-        onPressed: _restoreBackup,
+        onPressed: _fileTransferBusy ? null : _copyBackup,
+        icon: const Icon(Icons.copy_all_rounded),
+        label: const Text('Copy Full Kitchen Backup'),
+      ),
+      const SizedBox(height: 10),
+      OutlinedButton.icon(
+        onPressed: _fileTransferBusy ? null : _restoreBackup,
         icon: const Icon(Icons.settings_backup_restore_rounded),
-        label: const Text('Restore from clipboard'),
+        label: const Text('Restore Backup from Clipboard'),
       ),
       const SizedBox(height: 18),
-      const Text('Recommended: save the cookbook JSON file and move it privately to '
-        'your other device. The JSON backup currently covers saved recipes, NOT your '
-        'separate shopping list. To keep grocery items before switching phones, '
-        'open Shopping List and use Copy to share. Neither copy should be posted publicly.'),
+      const Text('Existing saved recipes and grocery items will not be '
+          'overwritten. Older Recipe Haven cookbook-only JSON files can '
+          'still be imported, but contain no grocery list. To move data to '
+          'a different Babe app installation, first export a JSON file in '
+          'the old app, then import it in the new one. Both apps have their '
+          'own private storage. The backup does not enable cloud sync.'),
+      const SizedBox(height: 12),
+      Text('Keep backup files private; they can contain personal recipe '
+          'notes and sensitive shopping entries.',
+          style: Theme.of(context).textTheme.bodySmall),
     ],
   );
 
