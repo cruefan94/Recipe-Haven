@@ -17,9 +17,11 @@ import '../services/incoming_recipe_share.dart';
 import '../services/private_cookbook_password.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.cookbook, required this.shopping});
+  const HomeScreen({super.key, required this.cookbook, required this.shopping,
+    this.privatePassword});
   final CookbookStore cookbook;
   final ShoppingListStore shopping;
+  final PrivateCookbookPassword? privatePassword;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -27,7 +29,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _page = 0; // Kitchen dashboard; each cooking tool has its own full-screen page.
-  final _privatePassword = PrivateCookbookPassword();
+  late final PrivateCookbookPassword _privatePassword;
   bool _privateUnlocked = false;
   bool _unlockBusy = false;
   final _search = TextEditingController();
@@ -49,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _privatePassword = widget.privatePassword ?? PrivateCookbookPassword();
     WidgetsBinding.instance.addObserver(this);
     widget.cookbook.addListener(_refresh);
     widget.shopping.addListener(_refresh);
