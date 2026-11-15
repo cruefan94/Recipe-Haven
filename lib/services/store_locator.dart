@@ -92,7 +92,25 @@ class StoreLocator {
         // A provider outage should not prevent a basic community-map search.
       }
     }
-    return _openStreetMap(latitude, longitude, searchRadiusKm);
+    try {
+      final osm = await _openStreetMap(
+          latitude, longitude, searchRadiusKm);
+      if (osm.stores.isNotEmpty) return osm;
+      try {
+        final backup = await _photon(
+            latitude, longitude, searchRadiusKm);
+        return backup.stores.isNotEmpty ? backup : osm;
+      } catch (_) {
+        return osm;
+      }
+    } catch (_) {
+      try {
+        return await _photon(latitude, longitude, searchRadiusKm);
+      } catch (_) {
+        throw StateError('Both store directories are temporarily unavailable. '
+          'Try a smaller search radius or Google Maps.');
+      }
+    }
   }
 
   Future<NearbyStoreResults> _googleWorker(
@@ -260,6 +278,74 @@ class StoreLocator {
     throw StateError('Store directory temporarily unavailable. '
         'Nearby grocery stores may still exist. Use the direct Maps search. '
         '${lastFailure is FormatException ? 'Directory response invalid.' : ''}');
+  }
+
+  /// Independent read-only OSM geocoder fallback. Photon accepts a category
+  /// filter without a free-text query. Results are validated and strictly
+  /// distance-filtered rather than treating search bias as a radius bound.
+  /// Only one request is issued after a user-initiated Overpass miss/outage.
+  Future<NearbyStoreResults> _photon(
+      double lat, double lon, double searchedKm) async {
+    final uri = Uri.https('photon.komoot.io', '/api', {
+      'lat': '$lat',
+      'lon': '$lon',
+      'limit': '50',
+      'include': 'osm.shop.supermarket,osm.shop.grocery,'
+          'osm.shop.convenience,osm.shop.general,osm.shop.greengrocer,'
+          'osm.shop.organic,osm.shop.deli,osm.shop.farm',
+    });
+    final response = await _client.get(uri).timeout(const Duration(seconds: 9));
+    if (response.statusCode != 200) {
+      throw StateError('Photon directory HTTP ${response.statusCode}');
+    }
+    final json = jsonDecode(utf8.decode(response.bodyBytes));
+    if (json is! Map || json['features'] is! List) {
+      throw const FormatException('Invalid backup directory response.');
+    }
+    const categories = {
+      'supermarket', 'grocery', 'convenience', 'general',
+      'greengrocer', 'organic', 'deli', 'farm',
+    };
+    final stores = <NearbyStore>[];
+    final seen = <String>{};
+    for (final raw in json['features'] as List) {
+      if (raw is! Map) continue;
+      final props = raw['properties'];
+      final geometry = raw['geometry'];
+      if (props is! Map || geometry is! Map) continue;
+      final name = (props['name'] as String? ?? '').trim();
+      if (name.isEmpty || props['osm_key'] != 'shop' ||
+          !categories.contains(props['osm_value'])) continue;
+      final coordinates = geometry['coordinates'];
+      if (coordinates is! List || coordinates.length < 2 ||
+          coordinates[0] is! num || coordinates[1] is! num) continue;
+      final storeLon = (coordinates[0] as num).toDouble();
+      final storeLat = (coordinates[1] as num).toDouble();
+      if (!storeLon.isFinite || !storeLat.isFinite ||
+          storeLat.abs() > 90 || storeLon.abs() > 180) continue;
+      final distance = distanceKm(lat, lon, storeLat, storeLon);
+      if (distance > searchedKm) continue;
+      final id = 'osm:${props['osm_type']}:${props['osm_id']}';
+      if (!seen.add(id)) continue;
+      final address = [
+        props['housenumber'], props['street'],
+        props['city'], props['state'],
+      ].whereType<String>().where((v) => v.isNotEmpty).join(' ');
+      stores.add(NearbyStore(
+        id: id,
+        name: name,
+        latitude: storeLat,
+        longitude: storeLon,
+        distanceKm: distance,
+        address: address,
+        category: (props['osm_value'] as String).replaceAll('_', ' '),
+      ));
+    }
+    stores.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+    return NearbyStoreResults(
+      stores: stores, provider: 'OpenStreetMap search (Photon)',
+      requestedRadiusKm: searchedKm, searchedRadiusKm: searchedKm,
+    );
   }
 
   void dispose() => _client.close();
