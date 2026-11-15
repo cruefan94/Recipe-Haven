@@ -110,24 +110,36 @@ class StoreLocator {
         // A provider outage should not prevent a basic community-map search.
       }
     }
+    // For large areas, ask the location-based directory first. A large
+    // Overpass radius can consume the entire lookup time before fallback.
+    if (searchRadiusKm > 10) {
+      try {
+        final nearby = await _photon(latitude, longitude, searchRadiusKm);
+        if (nearby.stores.isNotEmpty) return nearby;
+      } catch (_) {
+        // Public Photon may be unavailable; try a smaller OSM request below.
+      }
+    }
     try {
       final osm = await _openStreetMap(
           latitude, longitude, searchRadiusKm);
-      if (osm.stores.isNotEmpty) return osm;
+      if (osm.stores.isNotEmpty || searchRadiusKm > 10) return osm;
       try {
-        final backup = await _photon(
-            latitude, longitude, searchRadiusKm);
+        final backup = await _photon(latitude, longitude, searchRadiusKm);
         return backup.stores.isNotEmpty ? backup : osm;
       } catch (_) {
         return osm;
       }
     } catch (_) {
-      try {
-        return await _photon(latitude, longitude, searchRadiusKm);
-      } catch (_) {
-        throw StateError('Both store directories are temporarily unavailable. '
-          'Try a smaller search radius or Google Maps.');
+      if (searchRadiusKm <= 10) {
+        try {
+          return await _photon(latitude, longitude, searchRadiusKm);
+        } catch (_) {
+          // Both providers failed.
+        }
       }
+      throw StateError('Nearby-store directories could not respond. '
+          'Try again later, or use the Google Maps button.');
     }
   }
 
@@ -206,21 +218,31 @@ class StoreLocator {
     return output;
   }
 
-  /// Do not silently equate an HTTP error with a lack of grocery stores.
+  /// Try a small area before requesting a wider and more costly OSM area.
+  /// Return a visibly labelled partial-radius list if local stores are found.
+  /// This also avoids sending repeated broad queries to public infrastructure.
   Future<NearbyStoreResults> _openStreetMap(
       double lat, double lon, double requestedKm) async {
+    if (requestedKm <= 10) {
+      return _queryOverpass(lat, lon, requestedKm, requestedKm);
+    }
+    final local = await _queryOverpass(
+        lat, lon, 10, requestedKm, maxAttempts: 1);
+    if (local.stores.isNotEmpty) return local;
     try {
-      return await _queryOverpass(lat, lon, requestedKm, requestedKm);
+      final wide = await _queryOverpass(
+          lat, lon, requestedKm, requestedKm, maxAttempts: 1);
+      return wide.stores.isNotEmpty ? wide : local;
     } catch (_) {
-      if (requestedKm <= 10) rethrow;
-      // A smaller query is less likely to overload public community servers.
-      // Results must be explicitly labelled as a PARTIAL area search.
-      return _queryOverpass(lat, lon, 10, requestedKm);
+      // A successful empty local lookup is not proof of an empty wide area.
+      // Keep the partial radius indicator and external Maps fallback visible.
+      return local;
     }
   }
 
   Future<NearbyStoreResults> _queryOverpass(
-      double lat, double lon, double searchedKm, double requestedKm) async {
+      double lat, double lon, double searchedKm, double requestedKm,
+      {int? maxAttempts}) async {
     final around = '${(searchedKm * 1000).round()},${lat.toStringAsFixed(6)},${lon.toStringAsFixed(6)}';
     const shopTypes =
         'supermarket|grocery|convenience|greengrocer|general|organic|deli|farm';
@@ -232,7 +254,7 @@ class StoreLocator {
     // Avoid a cascade of slow public API retries. Wide searches use one
     // server; smaller searches may try a second if the first fails quickly.
     final attempts = searchedKm > 30 ? 1 : 2;
-    for (final endpoint in _overpassEndpoints.take(attempts)) {
+    for (final endpoint in _overpassEndpoints.take(maxAttempts ?? attempts)) {
       try {
         final response = await _client.post(
           endpoint,
@@ -307,16 +329,16 @@ class StoreLocator {
         '${lastFailure is FormatException ? 'Directory response invalid.' : ''}');
   }
 
-  /// Independent read-only OSM geocoder fallback. Photon accepts a category
-  /// filter without a free-text query. Results are validated and strictly
-  /// distance-filtered rather than treating search bias as a radius bound.
-  /// Only one request is issued after a user-initiated Overpass miss/outage.
+  /// Photon reverse geocoding searches around the user's coordinates,
+  /// instead of using forward-search location bias as a radius guarantee.
+  /// Returned coordinates are strictly filtered to the chosen radius.
   Future<NearbyStoreResults> _photon(
       double lat, double lon, double searchedKm) async {
-    final uri = Uri.https('photon.komoot.io', '/api', {
+    final uri = Uri.https('photon.komoot.io', '/reverse', {
       'lat': '$lat',
       'lon': '$lon',
-      'limit': '50',
+      'radius': '${searchedKm.round()}',
+      'limit': '100',
       'include': 'osm.shop.supermarket,osm.shop.grocery,'
           'osm.shop.convenience,osm.shop.general,osm.shop.greengrocer,'
           'osm.shop.organic,osm.shop.deli,osm.shop.farm',

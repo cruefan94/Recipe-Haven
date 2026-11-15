@@ -6,11 +6,11 @@ import 'package:http/testing.dart';
 import 'package:recipe_haven/services/store_locator.dart';
 
 void main() {
-  test('30 km lookup uses second current Overpass server after first fails', () async {
+  test('5 km lookup uses second current Overpass server after first fails', () async {
     final visited = <String>[];
     final client = MockClient((request) async {
       visited.add(request.url.host);
-      expect(request.bodyFields['data'], contains('30000'));
+      expect(request.bodyFields['data'], contains('5000'));
       if (request.url.host == 'overpass.private.coffee') {
         return http.Response('Temporary error', 503);
       }
@@ -34,7 +34,8 @@ void main() {
       }), 200);
     });
     final finder = StoreLocator(client: client);
-    final result = await finder.nearby(45.5, -73.57, ingredient: 'Parmesan cheese');
+    final result = await finder.nearby(45.5, -73.57,
+        ingredient: 'Parmesan cheese', searchRadiusKm: 5);
     expect(visited, ['overpass.private.coffee', 'overpass-api.de']);
     expect(result.stores, hasLength(1));
     expect(result.stores.single.name, 'Test Grocery');
@@ -72,14 +73,14 @@ void main() {
     locator.dispose();
   });
 
-  test('30 km directory outage returns clearly labelled 10 km fallback list', () async {
+  test('30 km search returns quick and labelled local-area list', () async {
     final calls = <String>[];
     final locator = StoreLocator(client: MockClient((request) async {
+      if (request.url.host == 'photon.komoot.io') {
+        return http.Response('Public location lookup unavailable', 503);
+      }
       final query = request.bodyFields['data']!;
       calls.add(query);
-      if (query.contains('around:30000,')) {
-        return http.Response('Busy', 503);
-      }
       return http.Response(jsonEncode({
         'elements': [
           {'type': 'node', 'id': 3, 'lat': 45.501, 'lon': -73.57,
@@ -92,7 +93,7 @@ void main() {
     expect(result.requestedRadiusKm, 30);
     expect(result.searchedRadiusKm, 10);
     expect(result.isPartial, isTrue);
-    expect(calls.where((q) => q.contains('around:30000,')), hasLength(2));
+    expect(calls.where((q) => q.contains('around:30000,')), isEmpty);
     expect(calls.where((q) => q.contains('around:10000,')), hasLength(1));
     locator.dispose();
   });
@@ -114,6 +115,8 @@ void main() {
       if (request.url.host != 'photon.komoot.io') {
         return http.Response('Server overloaded', 503);
       }
+      expect(request.url.path, '/reverse');
+      expect(request.url.queryParameters['radius'], '5');
       expect(request.url.queryParameters['include'],
           contains('osm.shop.supermarket'));
       return http.Response(jsonEncode({
@@ -152,14 +155,14 @@ void main() {
     locator.dispose();
   });
 
-  test('a 50 km query falls back to clearly labelled 10 km results', () async {
+  test('a 50 km request keeps its label when local stores are returned', () async {
     final queries = <String>[];
     final locator = StoreLocator(client: MockClient((request) async {
+      if (request.url.host == 'photon.komoot.io') {
+        return http.Response('Public map service busy', 503);
+      }
       final query = request.bodyFields['data']!;
       queries.add(query);
-      if (query.contains('around:50000,')) {
-        return http.Response('Large query unavailable', 503);
-      }
       return http.Response(jsonEncode({
         'elements': [
           {'type': 'node', 'id': 50, 'lat': 45.501, 'lon': -73.57,
@@ -169,11 +172,39 @@ void main() {
     }));
     final result = await locator.nearby(
         45.5, -73.57, ingredient: 'feta', searchRadiusKm: 50);
-    expect(queries.where((q) => q.contains('around:50000,')), hasLength(1));
+    expect(queries.where((q) => q.contains('around:50000,')), isEmpty);
     expect(result.stores.single.name, 'Nearby Grocer');
     expect(result.requestedRadiusKm, 50);
     expect(result.searchedRadiusKm, 10);
     expect(result.isPartial, isTrue);
+    locator.dispose();
+  });
+
+  test('30 km Photon reverse search can return the full requested area', () async {
+    final hosts = <String>[];
+    final locator = StoreLocator(client: MockClient((request) async {
+      hosts.add(request.url.host);
+      expect(request.url.path, '/reverse');
+      expect(request.url.queryParameters['radius'], '30');
+      return http.Response(jsonEncode({
+        'features': [
+          {
+            'properties': {
+              'osm_type': 'N', 'osm_id': 777,
+              'osm_key': 'shop', 'osm_value': 'supermarket',
+              'name': 'City Food Market',
+            },
+            'geometry': {
+              'type': 'Point', 'coordinates': [-73.57, 45.6],
+            },
+          },
+        ],
+      }), 200);
+    }));
+    final result = await locator.nearby(45.5, -73.57, searchRadiusKm: 30);
+    expect(result.stores.single.name, 'City Food Market');
+    expect(result.isPartial, isFalse);
+    expect(hosts, ['photon.komoot.io']);
     locator.dispose();
   });
 
