@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -91,7 +92,7 @@ void main() {
     expect(result.requestedRadiusKm, 30);
     expect(result.searchedRadiusKm, 10);
     expect(result.isPartial, isTrue);
-    expect(calls.where((q) => q.contains('around:30000,')), hasLength(3));
+    expect(calls.where((q) => q.contains('around:30000,')), hasLength(2));
     expect(calls.where((q) => q.contains('around:10000,')), hasLength(1));
     locator.dispose();
   });
@@ -151,4 +152,44 @@ void main() {
     locator.dispose();
   });
 
+  test('a 50 km query falls back to clearly labelled 10 km results', () async {
+    final queries = <String>[];
+    final locator = StoreLocator(client: MockClient((request) async {
+      final query = request.bodyFields['data']!;
+      queries.add(query);
+      if (query.contains('around:50000,')) {
+        return http.Response('Large query unavailable', 503);
+      }
+      return http.Response(jsonEncode({
+        'elements': [
+          {'type': 'node', 'id': 50, 'lat': 45.501, 'lon': -73.57,
+            'tags': {'name': 'Nearby Grocer', 'shop': 'supermarket'}},
+        ],
+      }), 200);
+    }));
+    final result = await locator.nearby(
+        45.5, -73.57, ingredient: 'feta', searchRadiusKm: 50);
+    expect(queries.where((q) => q.contains('around:50000,')), hasLength(1));
+    expect(result.stores.single.name, 'Nearby Grocer');
+    expect(result.requestedRadiusKm, 50);
+    expect(result.searchedRadiusKm, 10);
+    expect(result.isPartial, isTrue);
+    locator.dispose();
+  });
+
+  test('a stalled public directory exits with a clear timeout', () async {
+    final pendingResponse = Completer<http.Response>();
+    final locator = StoreLocator(
+      lookupTimeout: const Duration(milliseconds: 40),
+      providerTimeout: const Duration(seconds: 3),
+      overpassEndpoints: [Uri.parse('https://overpass.example/api/interpreter')],
+      client: MockClient((_) => pendingResponse.future),
+    );
+    await expectLater(
+      locator.nearby(45.5, -73.57, searchRadiusKm: 50),
+      throwsA(isA<StateError>().having(
+        (e) => e.message.toString(), 'error', contains('timed out'))),
+    );
+    locator.dispose();
+  });
 }

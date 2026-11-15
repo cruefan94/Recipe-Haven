@@ -59,8 +59,12 @@ class NearbyStoreResults {
 }
 
 class StoreLocator {
-  StoreLocator({http.Client? client, List<Uri>? overpassEndpoints})
-      : _client = client ?? http.Client(),
+  StoreLocator({
+    http.Client? client,
+    List<Uri>? overpassEndpoints,
+    this.lookupTimeout = const Duration(seconds: 20),
+    this.providerTimeout = const Duration(seconds: 6),
+  }) : _client = client ?? http.Client(),
         _overpassEndpoints = overpassEndpoints ?? [
           Uri.parse('https://overpass.private.coffee/api/interpreter'),
           Uri.parse('https://overpass-api.de/api/interpreter'),
@@ -68,6 +72,10 @@ class StoreLocator {
         ];
   final http.Client _client;
   final List<Uri> _overpassEndpoints;
+  /// Bounds the entire public-directory lookup, including fallback requests.
+  /// Tests may supply shorter durations to verify stalled responses safely.
+  final Duration lookupTimeout;
+  final Duration providerTimeout;
   static const double radiusKm = 30;
   static const double minRadiusKm = 1;
   static const double maxRadiusKm = 50;
@@ -84,6 +92,16 @@ class StoreLocator {
         searchRadiusKm > maxRadiusKm) {
       throw const FormatException('Choose a radius between 1 and 50 km.');
     }
+    return _lookupNearby(latitude, longitude, ingredient, searchRadiusKm)
+        .timeout(lookupTimeout, onTimeout: () {
+      throw StateError('Grocery-store search timed out. Public map directories '
+          'may be overloaded. Try a smaller radius or open Google Maps.');
+    });
+  }
+
+  Future<NearbyStoreResults> _lookupNearby(
+      double latitude, double longitude,
+      String ingredient, double searchRadiusKm) async {
     if (_workerUrl.isNotEmpty) {
       try {
         return await _googleWorker(latitude, longitude,
@@ -125,7 +143,7 @@ class StoreLocator {
       'radius': (searchRadiusKm * 1000).round().toString(),
       'ingredient': ingredient.length > 120 ? ingredient.substring(0, 120) : ingredient,
     });
-    final response = await _client.get(uri).timeout(const Duration(seconds: 16));
+    final response = await _client.get(uri).timeout(providerTimeout);
     if (response.statusCode != 200) throw StateError('Store service unavailable');
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     final stores = <NearbyStore>[];
@@ -206,12 +224,15 @@ class StoreLocator {
     final around = '${(searchedKm * 1000).round()},${lat.toStringAsFixed(6)},${lon.toStringAsFixed(6)}';
     const shopTypes =
         'supermarket|grocery|convenience|greengrocer|general|organic|deli|farm';
-    final query = '[out:json][timeout:14];'
+    final query = '[out:json][timeout:6];'
         '(nwr["shop"~"^($shopTypes)\$"](around:$around););'
         'out center 600;';
     Object? lastFailure;
     NearbyStoreResults? emptyResult;
-    for (final endpoint in _overpassEndpoints) {
+    // Avoid a cascade of slow public API retries. Wide searches use one
+    // server; smaller searches may try a second if the first fails quickly.
+    final attempts = searchedKm > 30 ? 1 : 2;
+    for (final endpoint in _overpassEndpoints.take(attempts)) {
       try {
         final response = await _client.post(
           endpoint,
@@ -221,7 +242,13 @@ class StoreLocator {
             'User-Agent': 'RecipeHaven/0.2 (https://github.com/cruefan94/Recipe-Haven)',
           },
           body: {'data': query},
-).timeout(const Duration(seconds: 16));
+).timeout(providerTimeout);
+        // Back off on rate limiting instead of immediately hitting the next
+        // public host and increasing load.
+        if (response.statusCode == 429 || response.statusCode == 406) {
+          lastFailure = StateError('Store directory rate limited');
+          break;
+        }
         if (response.statusCode != 200) {
           throw StateError('Store directory HTTP ${response.statusCode}');
         }
@@ -294,7 +321,7 @@ class StoreLocator {
           'osm.shop.convenience,osm.shop.general,osm.shop.greengrocer,'
           'osm.shop.organic,osm.shop.deli,osm.shop.farm',
     });
-    final response = await _client.get(uri).timeout(const Duration(seconds: 9));
+    final response = await _client.get(uri).timeout(providerTimeout);
     if (response.statusCode != 200) {
       throw StateError('Photon directory HTTP ${response.statusCode}');
     }

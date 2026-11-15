@@ -39,6 +39,7 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
   NearbyStoreResults? _found;
   Position? _position;
   bool _busy = false;
+  String? _searchStage;
   String? _error;
   int _radiusKm = 10;
   static const List<int> _radiusOptions = [2, 5, 10, 20, 30, 50];
@@ -76,11 +77,20 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
       return;
     }
     FocusManager.instance.primaryFocus?.unfocus();
-    setState(() { _busy = true; _error = null; _found = null; });
+    setState(() {
+      _busy = true;
+      _searchStage = 'Getting your location…';
+      _error = null;
+      _found = null;
+    });
     try {
-      final position = widget.positionProvider != null
-          ? await widget.positionProvider!()
-          : await _getPosition();
+      final position = await (widget.positionProvider != null
+          ? widget.positionProvider!()
+          : _getPosition()).timeout(const Duration(seconds: 20),
+            onTimeout: () => throw StateError(
+                'Location lookup timed out. Check GPS/location permissions and try again.'));
+      if (!mounted) return;
+      setState(() => _searchStage = 'Checking nearby store directories…');
       final results = await _locator.nearby(position.latitude, position.longitude,
         ingredient: _ingredient.text.trim(),
         searchRadiusKm: _radiusKm.toDouble());
@@ -92,7 +102,10 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
           'The store directory or GPS is unavailable. Try again or open Google Maps.';
       setState(() => _error = message);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() {
+        _busy = false;
+        _searchStage = null;
+      });
     }
   }
 
@@ -168,6 +181,15 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
           : 'Find stores within $_radiusKm km'),
         style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
       ),
+      if (_busy) ...[
+        const SizedBox(height: 8),
+        Text(
+          '${_searchStage ?? 'Searching…'} Public directories can be slow. '
+          'This search has a time limit; Google Maps and retailer search '
+          'are available below.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
       const SizedBox(height: 8),
       OutlinedButton.icon(
         onPressed: _maps,
