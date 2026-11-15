@@ -137,7 +137,7 @@ for flavor, label in [
 ]:
     strings = root / 'android/app/src' / flavor / 'res/values/strings.xml'
     strings.parent.mkdir(parents=True, exist_ok=True)
-    strings.write_text('<?xml version="1.0" encoding="utf-8"?>\\n'
-                       '<resources><string name="app_name">%s</string></resources>\\n'
+    strings.write_text('<?xml version="1.0" encoding="utf-8"?>\n'
+                       '<resources><string name="app_name">%s</string></resources>\n'
                        % label)
 print('Recipe Haven Android: Professional and Full variants ready.')
