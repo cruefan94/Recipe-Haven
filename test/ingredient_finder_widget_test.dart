@@ -15,6 +15,11 @@ void main() {
     final locator = StoreLocator(
       overpassEndpoints: [Uri.parse('https://overpass.example/api/interpreter')],
       client: MockClient((request) async {
+        if (request.url.host == 'photon.komoot.io') {
+          expect(request.url.path, '/reverse');
+          expect(request.url.queryParameters['radius'], '20');
+          return http.Response('Public directory busy', 503);
+        }
         requestedQueries.add(request.bodyFields['data']!);
         return http.Response(jsonEncode({
           'elements': [
@@ -66,7 +71,7 @@ void main() {
     await tester.tap(find.text('Find stores within 20 km'));
     await tester.pumpAndSettle();
     expect(requestedQueries, hasLength(1));
-    expect(requestedQueries.single, contains('around:20000,'));
+    expect(requestedQueries.single, contains('around:10000,'));
 
     await tester.scrollUntilVisible(
       find.text('Nearby stores (1)'), 180,
@@ -78,7 +83,9 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Test Grocery'), findsOneWidget);
-    expect(find.textContaining('20 km ·'), findsOneWidget);
+    // Local directory coverage is deliberately marked as partial rather
+    // than presented as a complete 20 km result.
+    expect(find.textContaining('Searched 10 km ·'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     locator.dispose();
