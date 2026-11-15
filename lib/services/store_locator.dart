@@ -214,7 +214,9 @@ class StoreLocator {
         lastFailure = error;
       }
     }
-    if (emptyResult != null) return emptyResult;
+    if (emptyResult != null) {
+      return emptyResult;
+    }
     throw StateError('Store directory temporarily unavailable. '
         'Nearby grocery stores may still exist. Use the direct Maps search. '
         '${lastFailure is FormatException ? 'Directory response invalid.' : ''}');
