@@ -1,51 +1,52 @@
-# Stable Android APK signing — configuration for a future release
+# Babe Android — update continuity without deleting the old app
 
-**Source-only setup. No release has been built or installed from this branch.** The manual GitHub workflow will become selectable on the default branch when the development branch is ready to merge.
+## What we verified
 
-## Why this matters
+Two previously generated Babe debug APKs were examined. Their APK v2 signing certificate SHA-256 fingerprints are different:
 
-Every Android installation has a signing certificate. Future updates must use the **same application ID** and the **same signing certificate**, with a higher version code.
+- Original test build: `06d32dc17e70e371309ce062b2153437453c94f3004e910cb262d3ae5d63cdd9`
+- Later test build: `17077c58f65e1a09267f19a33d23d3abe4108e169dfc2fcbd15884b2649c8c76`
 
-Recipe Haven retains two distinct application IDs:
-- Mom and Dad: com.cruefan94.recipe_haven
-- Babe: com.cruefan94.recipe_haven.babe
+Android requires the **same package ID and signing certificate** to install an APK as an update. The earlier GitHub Actions debug private keys have not been retained, so there is no supported way to replace the existing APK in place with a differently signed APK. Raising versionCode does not fix signing mismatches.
 
-Both can share one securely backed-up signing keystore, while remaining independently installable apps.
+## Keep the existing app and recipes
 
-The earlier GitHub debug APKs were signed using a temporary CI debug key. Those older APKs **cannot be updated in place** with the new release key. Users will need a one-time uninstall/install transition, so export and back up the cookbook first. Subsequent releases signed using the same keystore can install as updates.
+The previously installed Babe test package is `com.cruefan94.recipe_haven.babe`.
 
-## Prepare the signing key
+The new Babe Stable flavor has package ID `com.cruefan94.recipe_haven.babe.stable` and a temporary app label **Recipe Haven 💛 New**.
 
-Generate one long-lived Android keystore on a trusted personal machine and back it up securely. A possible example:
+A separate package ID means **both apps can coexist**. No uninstall is necessary to install Babe Stable. Storage is isolated: Android does not automatically transfer app data between package IDs.
 
-    keytool -genkeypair -v -keystore recipe-haven-release.jks -alias recipe-haven -keyalg RSA -keysize 3072 -validity 10000
+Migration after a signed Babe Stable APK exists:
 
-Use strong private passwords. Never commit the keystore, passwords or base64 value into Git, a public issue, or this chat.
+1. Leave the existing Babe app installed.
+2. Open **Backup & Restore** in the old app. Export the JSON cookbook backup (or copy the text into a private note). Keep this file private.
+3. Open **Shopping List → Copy to share** if you need saved grocery items. The current cookbook JSON does not contain shopping-list data.
+4. Install signed Babe Stable. It appears as **Recipe Haven 💛 New** alongside the old app.
+5. In Babe Stable, import the cookbook JSON file, then confirm the saved recipes. Shopping items can be entered or copied manually.
+6. Keep the old app unless and until you choose to remove it. Later Babe Stable APKs signed with the **same** permanent key can install in place over Babe Stable.
 
-In your GitHub repository go to Settings > Secrets and variables > Actions and create these **repository secrets**:
+## Signing secrets required before first Stable APK
 
-1. RECIPE_HAVEN_RELEASE_KEYSTORE_B64: a single-line base64 encoding of the .jks bytes.
-2. RECIPE_HAVEN_RELEASE_STORE_PASSWORD: keystore password.
-3. RECIPE_HAVEN_RELEASE_KEY_ALIAS: alias chosen when generating the key.
-4. RECIPE_HAVEN_RELEASE_KEY_PASSWORD: key password.
+Create a long-lived keystore on a trusted computer. For example:
 
-Keep a private backup of the keystore **and** passwords. Without the exact same key, Android will reject future in-place updates. If the key is lost, release continuity is lost.
+`keytool -genkeypair -v -keystore recipe-haven-release.jks -alias recipe-haven -keyalg RSA -keysize 3072 -validity 10000`
 
-## Workflow
+Back up the keystore and its passwords **privately**. Do not commit or send private keys or passwords to this chat.
 
-The manual action at .github/workflows/android-signed-release.yml:
-- downloads Flutter/Java dependencies;
-- generates two Android flavors with scripts/bootstrap_android.sh;
-- reads protected signing secrets into a temporary key file on the runner;
-- generates separate release APKs for both editions using an increasing version code;
-- uploads clearly labeled signed **unverified** APK artifacts for review.
+In GitHub Settings → Secrets and variables → Actions, add:
 
-The signing patch in scripts/configure_android_flavors.py only activates when RECIPE_HAVEN_RELEASE_KEYSTORE is present. The Android debug build flow remains unchanged.
+- `RECIPE_HAVEN_RELEASE_KEYSTORE_B64` — single-line base64 of the JKS keystore
+- `RECIPE_HAVEN_RELEASE_STORE_PASSWORD`
+- `RECIPE_HAVEN_RELEASE_KEY_ALIAS`
+- `RECIPE_HAVEN_RELEASE_KEY_PASSWORD`
 
-**This is not an automatic release and it has not been verified.** Do not distribute as final production apps without compilation, signing-certificate verification, installation/upgrade checks and functional device testing.
+The `.github/workflows/android-signed-release.yml` workflow only runs by manual dispatch. It builds **Babe Stable only**, checks Flutter analysis/tests, verifies APK signatures and publishes the signed APK artifact. Its build number increases with the GitHub workflow run number.
 
-## Security
+Keep the secrets **unchanged** for future releases. The GitHub connector cannot configure Secrets and the signing key has not been supplied yet, so **a stable signed APK is not available yet**.
 
-Never add signing files to repository or workflow artifacts. Never print passwords or the base64 secret in logs. Only trusted people should have permission to trigger protected release workflows.
+## Current development scope
 
-References: https://developer.android.com/studio/publish/app-signing
+The automatic Android test workflow builds **Babe only**. The other editions remain in the source tree but are paused. Test APKs still use ephemeral GitHub debug keys, so they are for installation/testing only and may not update one another.
+
+Do not claim successful stable in-place upgrades until two consecutively signed Babe Stable APKs have been installed as an update on a real device and its cookbook has been preserved.

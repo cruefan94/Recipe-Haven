@@ -1,4 +1,4 @@
-name: Signed Android APKs — Manual Release
+name: Babe Android — Signed Stable APK (Manual)
 
 on:
   workflow_dispatch:
@@ -47,24 +47,35 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
           chmod 600 "$keystore"
           echo "RECIPE_HAVEN_RELEASE_KEYSTORE=$keystore" >> "$GITHUB_ENV"
-      - name: Build both signed Android APK editions
+      - name: Flutter static analysis
+        run: flutter analyze
+      - name: Flutter unit tests
+        run: flutter test
+      - name: Build signed Babe Stable APK
         shell: bash
         run: |
           set -euo pipefail
-          code=$((10000 + GITHUB_RUN_NUMBER))
-          flutter build apk --release --flavor momdad --dart-define=EDITION=momdad --build-number="$code"
-          flutter build apk --release --flavor babe --dart-define=EDITION=babe --build-number="$code"
+          code=$((30000 + GITHUB_RUN_NUMBER))
+          flutter build apk --release --flavor babeStable --dart-define=EDITION=babe --build-name=1.0.0 --build-number="$code"
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="build/app/outputs/flutter-apk/app-babeStable-release.apk"
+          test -s "$apk"
+          signer="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -n "$signer"
+          "$signer" verify --verbose --print-certs "$apk"
       - name: Collect APK files
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p release-signed
-          cp build/app/outputs/flutter-apk/app-momdad-release.apk release-signed/For-Mom-and-Dad-Android-SIGNED.apk
-          cp build/app/outputs/flutter-apk/app-babe-release.apk release-signed/Babe-Android-SIGNED.apk
+          cp build/app/outputs/flutter-apk/app-babeStable-release.apk release-signed/Recipe-Haven-Babe-STABLE-SIGNED.apk
       - name: Publish signed APK artifacts for manual review
         uses: actions/upload-artifact@v4
         with:
-          name: RecipeHaven-SIGNED-ANDROID-UNVERIFIED
+          name: RecipeHaven-Babe-STABLE-SIGNED-UNVERIFIED
           path: release-signed/*.apk
           if-no-files-found: error
           retention-days: 30

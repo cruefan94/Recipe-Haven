@@ -1,4 +1,4 @@
-name: Build Android — Babe and For Mom and Dad
+name: Build Android — Babe Only (Test)
 
 on:
   workflow_dispatch:
@@ -33,18 +33,19 @@ jobs:
         run: flutter analyze
       - name: Test
         run: flutter test
-      - name: Build For Mom and Dad Android test APK
-        run: flutter build apk --debug --flavor momdad --dart-define=EDITION=momdad
       - name: Build Babe Android test APK
-        run: flutter build apk --debug --flavor babe --dart-define=EDITION=babe
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$((20000 + GITHUB_RUN_NUMBER))
+          flutter build apk --debug --flavor babe --dart-define=EDITION=babe --build-number="$code"
       - name: Label APKs
         run: |
           mkdir -p release-test
-          cp build/app/outputs/flutter-apk/app-momdad-debug.apk release-test/For-Mom-and-Dad-Android-TEST.apk
           cp build/app/outputs/flutter-apk/app-babe-debug.apk release-test/Babe-Android-TEST.apk
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: RecipeHaven-Android-TEST-APKs
+          name: RecipeHaven-Babe-Android-TEST-APK
           path: release-test/*.apk
           retention-days: 30

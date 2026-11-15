@@ -23,6 +23,10 @@ if 'create("babe")' not in s:
             dimension = "edition"
             applicationIdSuffix = ".babe"
         }
+        create("babeStable") {
+            dimension = "edition"
+            applicationIdSuffix = ".babe.stable"
+        }
     }
 '''
     if 'android {' not in s:
@@ -31,6 +35,16 @@ if 'create("babe")' not in s:
 elif 'create("momdad")' not in s:
     s = s.replace('productFlavors {',
                   'productFlavors {\n        create("momdad") { dimension = "edition" }', 1)
+# Prepare side-by-side Babe Stable: the installed test app was signed with an
+# ephemeral debug key that cannot be reproduced on later GitHub runners.
+# New app ID preserves the existing installation while the user transfers
+# cookbook JSON to the long-term stable release.
+if 'create("babeStable")' not in s:
+    s = s.replace('productFlavors {',
+                  'productFlavors {\n'
+                  '        create("babeStable") { dimension = "edition"; '
+                  'applicationIdSuffix = ".babe.stable" }', 1)
+
 # Persistent release signing is optional and never activated for normal debug
 # builds. The keystore remains outside the repository and is supplied by
 # protected GitHub Actions secrets (or a local environment).
@@ -94,9 +108,13 @@ if not template.is_file():
 target.parent.mkdir(parents=True, exist_ok=True)
 target.write_text(template.read_text())
 
-for flavor, label in [('momdad', 'For Mom and Dad'), ('babe', 'Recipe Haven 💛')]:
+for flavor, label in [
+    ('momdad', 'For Mom and Dad'),
+    ('babe', 'Recipe Haven 💛'),
+    ('babeStable', 'Recipe Haven 💛 New'),
+]:
     strings = root / 'android/app/src' / flavor / 'res/values/strings.xml'
     strings.parent.mkdir(parents=True, exist_ok=True)
     strings.write_text('<?xml version="1.0" encoding="utf-8"?>\n'
                        '<resources><string name="app_name">%s</string></resources>\n' % label)
-print('Android: Mom & Dad and Babe flavors configured with distinct labels and package IDs.')
+print('Android: Babe test and Babe Stable flavors ready; other edition preserved.')
