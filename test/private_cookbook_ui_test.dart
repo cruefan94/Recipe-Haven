@@ -5,15 +5,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:recipe_haven/screens/home_screen.dart';
 import 'package:recipe_haven/services/cookbook_store.dart';
 import 'package:recipe_haven/services/shopping_list_store.dart';
+import 'package:recipe_haven/services/private_cookbook_password.dart';
+
+class _MemoryPreferences extends Fake implements SharedPreferencesAsync {
+  final Map<String, String> values = {};
+
+  @override
+  Future<String?> getString(String key) async => values[key];
+
+  @override
+  Future<void> setString(String key, String value) async {
+    values[key] = value;
+  }
+}
 
 void main() {
   testWidgets('private cookbook stays hidden until opened via Options', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final cookbook = CookbookStore(SharedPreferencesAsync());
-    final shopping = ShoppingListStore(SharedPreferencesAsync());
+    final prefs = _MemoryPreferences();
+    final cookbook = CookbookStore(prefs);
+    final shopping = ShoppingListStore(prefs);
 
     await tester.pumpWidget(MaterialApp(
-      home: HomeScreen(cookbook: cookbook, shopping: shopping),
+      home: HomeScreen(cookbook: cookbook, shopping: shopping,
+        privatePassword: PrivateCookbookPassword(preferences: prefs)),
     ));
 
     expect(find.text('Marijuana Cookbook'), findsNothing);
