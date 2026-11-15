@@ -139,3 +139,8 @@ Babe now has a **Full Kitchen Backup** feature that saves both recipe collection
 ### Babe Quick Recipes — fully offline
 
 Babe now bundles **18 original recipes with ingredients and step-by-step instructions** (including Chicken Parmesan, garlic Parmesan pasta, tacos, pancakes, banana bread, and stir-fries). The **Babe Quick Recipes** screen lists all of them without requiring internet, and both regular Find Recipes and Cook With What I Have can suggest them locally before fetching online options. These are original starter recipes, not copies from recipe websites or substitutes for nutritional/allergen advice. Regression tests cover offline search and complete recipe data.
+
+
+## Android name and usability (next signed release)
+
+The main Android app is now named **Recipe Haven** in the launcher, app title, built-in recipe labels, and backup prompts. The visible Babe and other edition labels are no longer used for the single Android release. Home now opens directly and groups four daily tasks (Find Recipes, Cook With What I Have, My Cookbook, Shopping List), with a four-tab navigation bar and secondary tools below. Options still controls access to the private cookbook; it is not shown as an ordinary home item. The Android Studio/Gradle flavor name `babeStable` and existing package ID `com.cruefan94.recipe_haven.babe.stable` remain **internal** for signing and update continuity. Changing the package ID or signing certificate would stop in-place updates. The automatic development workflow analyzes, tests, and compiles a **non-distributed** APK for verification; the next installable release comes only from the permanently signed manual workflow. Previous test/preview editions are not generated for distribution.

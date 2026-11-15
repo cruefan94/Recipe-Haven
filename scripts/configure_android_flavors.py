@@ -161,12 +161,12 @@ target.write_text(template.read_text())
 
 for flavor, label in [
     ('momdad', 'For Mom and Dad'),
-    ('babe', 'Recipe Haven 💛'),
-    ('babeStable', 'Recipe Haven 💛 New'),
-    ('babePreview', 'Recipe Haven 💛 Preview'),
+    ('babe', 'Recipe Haven'),
+    ('babeStable', 'Recipe Haven'),
+    ('babePreview', 'Recipe Haven Preview (Legacy)'),
 ]:
     strings = root / 'android/app/src' / flavor / 'res/values/strings.xml'
     strings.parent.mkdir(parents=True, exist_ok=True)
     strings.write_text('<?xml version="1.0" encoding="utf-8"?>\n'
                        '<resources><string name="app_name">%s</string></resources>\n' % label)
-print('Android: Babe test and Babe Stable flavors ready; other edition preserved.')
+print('Android: one public Recipe Haven Stable app; legacy identifiers preserved for update compatibility.')

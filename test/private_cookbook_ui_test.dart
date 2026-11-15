@@ -33,11 +33,9 @@ void main() {
     expect(find.text('Marijuana Cookbook'), findsNothing);
     expect(find.text('Marijuana'), findsNothing);
 
-    await tester.scrollUntilVisible(
-      find.text('Options'), 250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Options'));
+    // Options is available directly from the app bar, even when the
+    // compact home-tool list is below the fold.
+    await tester.tap(find.byTooltip('Options'));
     await tester.pumpAndSettle();
 
     expect(find.text('Private Cookbook'), findsOneWidget);
