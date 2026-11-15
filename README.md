@@ -1,146 +1,79 @@
-# Recipe Haven — two editions, shared features
+# Recipe Haven
 
-**Source checkpoint, not a tested or signed release.** The app now presents a clear, Flipper-dashboard-inspired **Kitchen Home** with five dedicated feature cards and a consistent way back. This Flutter project has two personalized editions. Their cooking features are intentionally shared; only their welcome screen, app label and supported platforms differ.
+**One cooking and shopping app. No editions.**
 
-| Edition | Welcome screen (exact text) | Android | iPhone / iOS |
-| --- | --- | --- | --- |
-| **Babe 💛** | `made just for you babe 💛` | Yes | **No** |
-| **For Mom and Dad** | `for mom and dad` | Yes | **Yes, after an iOS build and Apple signing** |
+**Active platform:** Android. All current feature development, on-device testing, bug fixes, downloads and release work target Recipe Haven for Android.
 
-Android app identities are separate so both editions can be installed side by side:
+**Future platform:** iPhone / iOS. The same Recipe Haven experience is planned after the Android app is stable. The Flutter source and iOS bootstrap scripts are retained; a signed iPhone IPA, TestFlight release and App Store listing have **not** been created.
 
-- Babe 💛: `com.cruefan94.recipe_haven.babe`
-- For Mom and Dad: `com.cruefan94.recipe_haven` (retains original Standard application's identity)
+## Features
 
-The sole iOS app identity is `com.cruefan94.recipehaven.momdad`. No iOS build for Babe exists in the workflows. The application rejects Babe as a runtime edition on iOS as a defense in depth.
+- **Find Recipes:** search recipes from available online sources and filter irrelevant dishes; 18 original step-by-step offline starter recipes are bundled.
+- **My Cookbook:** save complete recipes, links, ingredients and cooking steps for offline use.
+- **Add Recipe:** enter your own recipes or import supported HTTPS pages.
+- **Cook With What I Have:** explore recipes based on pantry ingredients, including offline choices.
+- **Shopping List:** add ingredients or manual grocery items and check them off without internet.
+- **Find Ingredient:** selectable 2, 5, 10, 20, 30 or 50 km grocery-store search; a community-map directory and external Google Maps/retailer search fallbacks. Store listings **do not confirm product availability, inventory, price or size**.
+- **Ingredient Alternatives:** offline suggestions with approximate substitution amounts and limitations.
+- **Backup & Restore:** portable JSON full-kitchen backups, and import of earlier cookbook-only JSON files.
+- **Private Cookbook:** a separate personal collection accessible from Options with a user-set password, not shown on the public home screen.
 
-## Same features in BOTH editions
+The Android UI uses the **Recipe Haven** name, one consistent dark theme, and Home / Find / Cookbook / Shopping navigation.
 
-1. **Find Recipes** — search for a dish and browse multiple recipe results sourced from TheMealDB, DummyJSON sample recipes and best-effort recipe websites; open wider Google search in the browser.
-2. **My Cookbook** — locally save, read and remove personal recipes. Previously saved ingredient and instruction text works offline.
-3. **Add Recipe** — write a recipe or import a recipe URL, extracting Schema.org Recipe JSON-LD where permitted. A source link is retained where extraction is unavailable.
-4. **Marijuana Cookbook** — a separate saved collection for adult-use cannabis recipes, with its own search and add/import entry. Stored separately from My Cookbook. Keep infused foods labelled and away from children and pets.
-5. **Find Ingredient** — search grocery stores within a *straight-line* 30 km radius using foreground, permission-based GPS and an OpenStreetMap directory fallback. Open the store in Google Maps, get directions, and find the retailer website/product search. Map proximity does NOT verify product stock, size or price.
+## Fresh Android APK for direct testing
 
-The source does not yet provide live store product inventory/size/price aggregation. That needs participating retailer catalog data; links to retailer sites and searches are provided rather than fabricated prices. The optional `STORE_LOOKUP_URL` build-time define supports a properly secured Google Places worker (not included as an operational deployment). For a user's privacy, the app only requests location when searching for stores.
+The user explicitly requested a fresh installation and reported deleting the previous testing app. There is now **one Android application ID**:
 
-## Android build (both editions)
+`com.cruefan94.recipe_haven`
 
-Requires Flutter SDK and Android SDK. On Linux/macOS/Windows, from this project root:
+Older experimental Android package IDs are no longer release targets. This is a **new installation**, not an in-place update of any old package. Android does not automatically transfer the old app's private storage; only an existing exported JSON backup can be imported. The public-facing label is **Recipe Haven**.
+
+The workflow [Recipe Haven — Fresh Android APK (Signed Test)](.github/workflows/android-apks.yml) runs on the active development branch. It analyzes, tests, builds one **release-signed** Android APK using the existing owner-supplied GitHub Actions signing secrets, verifies its package ID and public signing certificate, and publishes:
+
+**`Recipe-Haven-Android-FRESH-INSTALL.apk`**
+
+under the **Recipe-Haven-Android-FRESH-INSTALL** Actions artifact. The keystore and passwords are stored only as GitHub Secrets; they are not checked into Git. The existing permanent key is reused and must **not** be regenerated. Later releases should retain this new package ID and signing certificate for smooth updates.
+
+The first new installer requires Android phone testing before being described as fully verified. Use the app to save recipes, check the shopping list, change the Find Ingredient radius, check nearby-store fallbacks, use backups, and open Offline Recipes.
+
+## Run Android locally
+
+Requires Flutter and the Android SDK:
 
 ```bash
 flutter pub get
 bash scripts/bootstrap_android.sh
 flutter analyze
 flutter test
-flutter build apk --debug --flavor babe --dart-define=EDITION=babe
-flutter build apk --debug --flavor momdad --dart-define=EDITION=momdad
+flutter build apk --debug
 ```
 
-The GitHub workflow **Build Android — Babe and For Mom and Dad** will produce clearly labelled TEST APK artifacts for both editions after a new GitHub repo is created and files are uploaded. These **debug-signed** APKs are not production signed and may not support updating in place across CI runner changes. Preserve a stable release signing key and add backup/export before publishing real releases. Do not commit private keys.
+For a signed release, load the owner's permanent signing keystore and password environment variables and run `flutter build apk --release`.
 
-## iPhone / iOS build (For Mom and Dad ONLY)
+## Future iPhone roadmap
 
-**Requires a Mac running Xcode**, or a macOS GitHub Actions runner. The iOS platform directory is generated by Flutter on a Mac, then configured as **For Mom and Dad** with a dedicated bundle ID and iOS foreground location permission. Babe has no iOS product.
+The future iPhone release will share the **Recipe Haven** brand and feature set; there will be no separate family or personalized edition.
+
+Planned steps are adapting platform-specific file import, local storage, external links, sharing and foreground location; then testing on an iPhone, adding Apple privacy disclosures, configuring signing and provisioning, running TestFlight, and preparing for App Store review. Nothing is currently released for iPhone.
+
+Optional iOS simulator bootstrap on a Mac with Xcode:
 
 ```bash
 flutter pub get
-bash scripts/bootstrap_ios_momdad.sh
-flutter analyze
-flutter test
-flutter build ios --simulator --debug --no-codesign --dart-define=EDITION=momdad
+bash scripts/bootstrap_ios.sh
+flutter build ios --simulator --debug --no-codesign
 ```
 
-The workflow **Build iOS Simulator — For Mom and Dad ONLY** attempts an unsigned simulator compile. Its output is a **simulator-only app**, NOT a download/installable iPhone IPA. To put the app on a real iPhone, configure an Apple signing team and provisioning in Xcode and build/distribute a signed app through Xcode, TestFlight or a permitted distribution method. Typical local device build from a signed Xcode project:
+The reserved iOS bundle identifier is `com.cruefan94.recipehaven`, iOS 14.0+. An iOS simulator build is **not** a device-installable IPA.
 
-```bash
-flutter build ios --release --dart-define=EDITION=momdad
-open ios/Runner.xcworkspace
-```
+## Roadmap and limitations
 
-Then set your development team under Runner → Signing & Capabilities, select a connected device or archive and distribute. Real iPhone testing, signed IPA production, and Apple's app review are **outstanding**.
+1. Complete fresh Android phone installation and feature verification.
+2. Further improve reliability of the in-app store directory, small-screen layout, keyboard behavior and usability.
+3. Integrate authorized retailer product catalogs where available; never invent stock or prices.
+4. Preserve permanent Android signing continuity for future APK upgrades and eventual store distribution.
+5. Develop and test the future unified Recipe Haven iPhone application after Android completion.
 
-**iOS review caveat:** Apple may scrutinize cannabis-related content. This application currently organizes personal adult-use recipes and does not sell cannabis, but App Store approval is not guaranteed. See [Apple App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/), particularly 1.4.3 and 5.1.1. Keep age suitability and legal compliance in mind before distribution.
+All saved recipe and shopping information is local unless explicitly exported or shared. Location is requested only when searching for nearby stores. TheMealDB and other external providers may have commercial licensing restrictions that require review before a broader store launch.
 
-## GitHub home
-
-This project belongs in a separate repository at [`cruefan94/Recipe-Haven`](https://github.com/cruefan94/Recipe-Haven). It must not modify or import hardware features or secrets from the Flipper AI projects. See [`docs/FLIPPER_SATELLITE_UI_REFERENCE.md`](docs/FLIPPER_SATELLITE_UI_REFERENCE.md) for the shared design patterns; build workflows remain independent. The source still requires GitHub CI compilation and device testing.
-
-## External API and open-source reference credits
-
-- [TheMealDB](https://www.themealdb.com/api.php) — key `1` is for development/testing; verify production usage and attribution requirements before publication.
-- [DummyJSON recipe API](https://dummyjson.com/docs/recipes) — sample recipes, not an exhaustive recipe search engine.
-- Website WordPress search endpoints are best-effort and may fail or return non-recipe pages.
-- [KitchenOwl](https://github.com/TomBursch/kitchenowl), [recipe-scrapers-webservice](https://github.com/steve192/recipe-scrapers-webservice), and [Chefs-Book-TheMealDB-integration](https://github.com/JustTeRoR/Chefs-Book-TheMealDB-integration-) were studied as public references. **Their application code was not copied.**
-
-All source providers retain their own content rights and terms. Universal search coverage, production catalog integration, cloud backup, full accessibility and user testing, signed Android releases, and signed iOS builds remain incomplete.
-
-
-### In-development recipe backup and retailer product listings
-
-On the source branch `feature/ingredient-products-and-cookbook-backup`, **Backup & Restore** copies a versioned JSON backup of both saved cookbook collections to the clipboard and restores by *merging* entries without deleting existing recipes. Large backups may exceed clipboard limits. Find Ingredient also accepts optional retailer-provided product names, sizes, prices, stock indications and direct URLs from an authorized HTTPS catalogue adapter (see `docs/ingredient-product-feed.md`). No retailer API is live by default, so the app does not manufacture stock or prices.
-
-**This feature branch has deliberately not been compiled or tested.** The previously successful Android APKs were built from `main`, before these changes.
-
-
-### Portable file backups — development branch
-
-Android and iOS now have source-level support for a system-native **Save cookbook to JSON file** action and **Import cookbook from JSON file** action. Both collections are included. Import uses the existing validated merge behavior, preserving recipes already saved on the device. The file-picker dependency is `file_picker ^13.3.3` (iOS 14+). Existing clipboard transfer remains as a fallback. The feature has not been compiled or device-tested at the user's request.
-
-
-### Recipe discovery expansion — source branch
-
-Recipe details can now attempt **Import ingredients & steps** from a website when a search result was link-only; the original URL remains accessible if the website does not provide structured recipe metadata. Previously saved link-only recipes are updated in place when an import succeeds, while unsaved results require the user to tap Save. The search screen also offers browser-based recipe search shortcuts for Allrecipes, Food Network, BBC Good Food, Taste of Home, and Serious Eats. These are **external browser searches**, not additional in-app indexed recipes. All changes remain **untested and uncompiled**, per request.
-
-The iOS Mom and Dad bootstrap now targets iOS **14.0+**, matching the file-picker plugin requirement; this affects no Babe edition iOS build because Babe is Android-only.
-
-
-## Offline Ingredient Alternatives (in-development branch)
-
-Both editions now include a **Ingredient Alternatives** kitchen tool. Enter a missing ingredient or tap the swap icon beside an ingredient in any recipe, and the app shows offline substitute suggestions with **reference amounts, recommended uses, and limitations**. The Find Ingredient page also links directly to this feature, and the replacement guide links back to the 30 km store finder. The built-in reference currently covers **41** common ingredients and **82** contextual replacement options. Typed recipe quantities do **not** automatically scale the amounts; each reference amount is clearly labeled. Never apply these unverified swaps to home canning, infant food, or medical diets. See `docs/ingredient-alternatives.md` for reference sources.
-
-As requested, the new source has **not been compiled, tested, or merged into the previously verified APK builds**.
-
-
-### Android Share-to-Recipe-Haven (development branch)
-
-Both independently installable Android editions can receive HTTPS recipe links from Android's Share menu. The user is taken to **Add Recipe** with the shared URL prefilled; they choose their cookbook collection and explicitly tap Save. For browsers without a Recipe Haven Share destination, **Paste recipe link** reads a copied HTTPS URL from the clipboard. No recipe is saved automatically and no extra dangerous Android permission is needed. See docs/android-share-recipes.md for the Android native bridge and privacy behavior. This is source-only, not included in the earlier APKs, and has not been tested or built following the request to continue development without verification.
-
-
-### Secure Android APK updates (prepared, not activated)
-
-The development branch includes a manual Android release workflow designed to sign **both** independent APK editions with a protected, reusable signing key. It reads the key and passwords from GitHub Actions Secrets and produces signed artifacts with increasing build numbers, while leaving normal debug builds unchanged. This is not configured with a real key and has not run. The old debug-signed test APKs cannot update in-place to a differently signed release; users should back up their cookbook before making the one-time transition. See docs/android-signed-updates.md for exact secret names, security requirements and limitations.
-
-
-### Cook With What I Have — new pantry recipe discovery
-
-Kitchen Home now includes a **Cook With What I Have** screen in both editions. Enter up to three ingredients to find **offline matches in My Cookbook** and optionally discover additional recipe suggestions using a short, capped set of TheMealDB V1 requests. An **Offline-only search** toggle avoids network usage. Results show matched ingredient counts, not claims that a dish can be prepared exclusively from the entered items. The public API provides one-ingredient filters, so the code unions candidates across searches and ranks their full ingredient lists locally. See [pantry discovery notes](docs/cook-with-what-i-have.md), including the production API licensing requirement. This branch remains uncompiled and untested by request.
-
-
-## Integrated milestone: Recipe → Shopping List → Nearby Stores / Alternatives
-
-The development branch now links recipes directly to an **offline Shopping List** on both editions. Open any recipe with ingredients and choose **Add ingredients to shopping list**, or open **Shopping List** from Kitchen Home to add groceries manually, check items off, remove checked items and copy your unchecked list. Each ingredient retains its recipe quantities and source; repeat imports of the same recipe do not duplicate existing rows. From a shopping item choose **Find nearby** for the 30 km grocery finder or **Substitute** for the offline alternatives guide. The Home dashboard displays the remaining shopping-item count. Shopping data uses a separate per-edition local store with guarded persistence. **The previous cookbook JSON backup does not yet include the separate shopping list**: copy its unchecked items before changing phones or uninstalling. More: [source milestone scope and limits](docs/milestone-recipe-to-store.md).
-
-**Verification:** This is an integrated **source milestone only**, not a compiled app release. The draft branch remains untested and unmerged in accordance with the user's earlier request to skip testing. The last successful Android and iOS simulator builds on main do not contain this feature.
-
-
-## Current directive: Babe 💛 Android only until completed
-
-Feature development, CI APK builds, quality fixes, device verification and eventual stable release now prioritize **Babe for Android**. The Mom and Dad Android and iPhone editions remain intact in source, but their new build work is paused. The main branch is unchanged.
-
-The Babe TEST APKs from earlier GitHub Actions runs are signed with different debug certificates. **A test build using a new debug certificate cannot update the old installed APK in place**. A separate signed Babe Stable flavor (`com.cruefan94.recipe_haven.babe.stable`) is prepared so it can be installed **alongside**, not in place of, the old test app. The old app does not need to be uninstalled. The user can back up their old cookbook and import it into Babe Stable. Once a permanent keystore has been configured as GitHub Actions secrets, later Babe Stable APKs can update in place with the same certificate and a higher version code. Detailed instructions: [Babe Android update migration](docs/android-signed-updates.md).
-
-
-### Babe full kitchen backup — major milestone
-
-Babe now has a **Full Kitchen Backup** feature that saves both recipe collections **and** the separate shopping list (including purchased/checkoff status) to one versioned JSON file. It supports restoring that file or clipboard text by merging IDs without deleting older saved entries. Earlier `recipe-haven-cookbook` format files remain importable; those contain recipes only. The export is private and user-initiated, with no background sync or external account. A storage write error can cause a **partial import of recipes before groceries**; the UI states this explicitly, and reimporting the same file is safe because existing IDs are retained. This makes safe migration from old Babe test APK to side-by-side Babe Stable more practical. See `docs/babe-full-kitchen-backup.md`.
-
-
-### Babe Quick Recipes — fully offline
-
-Babe now bundles **18 original recipes with ingredients and step-by-step instructions** (including Chicken Parmesan, garlic Parmesan pasta, tacos, pancakes, banana bread, and stir-fries). The **Babe Quick Recipes** screen lists all of them without requiring internet, and both regular Find Recipes and Cook With What I Have can suggest them locally before fetching online options. These are original starter recipes, not copies from recipe websites or substitutes for nutritional/allergen advice. Regression tests cover offline search and complete recipe data.
-
-
-## Android name and usability (next signed release)
-
-The main Android app is now named **Recipe Haven** in the launcher, app title, built-in recipe labels, and backup prompts. The visible Babe and other edition labels are no longer used for the single Android release. Home now opens directly and groups four daily tasks (Find Recipes, Cook With What I Have, My Cookbook, Shopping List), with a four-tab navigation bar and secondary tools below. Options still controls access to the private cookbook; it is not shown as an ordinary home item. The Android Studio/Gradle flavor name `babeStable` and existing package ID `com.cruefan94.recipe_haven.babe.stable` remain **internal** for signing and update continuity. Changing the package ID or signing certificate would stop in-place updates. The automatic development workflow analyzes, tests, and compiles a **non-distributed** APK for verification; the next installable release comes only from the permanently signed manual workflow. Previous test/preview editions are not generated for distribution.
+**Active branch:** [Android development](https://github.com/cruefan94/Recipe-Haven/tree/feature/ingredient-products-and-cookbook-backup). The default branch is used for project coordination and the signed-release entry point until the current testing milestone is approved.
