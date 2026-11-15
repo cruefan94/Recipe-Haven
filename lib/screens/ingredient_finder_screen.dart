@@ -82,18 +82,29 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
     }
   }
 
+  /// Maps works immediately, even if the app's GPS permission was denied.
+  /// Searching for supermarket businesses avoids confusing ingredient
+  /// names with store names.
   Future<void> _maps() async {
-    Position? position = _position;
-    // A Maps search still works without our having permission; Maps can ask
-    // directly for location on its own terms.
-    if (position == null) {
-      try { position = await _getPosition(); } catch (_) { /* Open Maps near me. */ }
-    }
     if (!mounted) return;
     await openExternalUrl(googleMapsSearch(
-      _ingredient.text.trim().isEmpty ? 'grocery stores' : _ingredient.text.trim(),
-      latitude: position?.latitude, longitude: position?.longitude,
+      'supermarkets',
+      latitude: _position?.latitude, longitude: _position?.longitude,
     ).toString(), context);
+  }
+
+  /// A product web search is a useful fallback when public store directories
+  /// time out. Prices or stock shown by external websites are not verified.
+  Future<void> _searchProductWeb() async {
+    final name = _ingredient.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Enter an ingredient first, such as Parmesan cheese.');
+      return;
+    }
+    final uri = Uri.https('www.google.com', '/search', {
+      'q': '$name grocery store buy near me',
+    });
+    await openExternalUrl(uri.toString(), context);
   }
 
   @override
@@ -102,7 +113,8 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
     return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
       Text('Find Ingredient', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
       const SizedBox(height: 8),
-      const Text('Search for an ingredient, then find grocery stores within 30 km of your current location.'),
+      const Text('Find nearby grocery stores within 30 km, or search for an '
+          'ingredient on retailer websites. A store listing does not guarantee stock.'),
       const SizedBox(height: 14),
       TextField(
         controller: _ingredient,
@@ -110,7 +122,7 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
         textInputAction: TextInputAction.search,
         decoration: const InputDecoration(
           labelText: 'What ingredient do you need?',
-          hintText: 'e.g. mozzarella, vanilla, flour',
+          hintText: 'e.g. Parmesan cheese, vanilla, flour',
           prefixIcon: Icon(Icons.shopping_basket_outlined),
         ),
       ),
@@ -125,7 +137,13 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
       OutlinedButton.icon(
         onPressed: _maps,
         icon: const Icon(Icons.map_outlined),
-        label: const Text('Search nearby on Google Maps'),
+        label: const Text('See grocery stores on Google Maps'),
+      ),
+      const SizedBox(height: 8),
+      OutlinedButton.icon(
+        onPressed: _searchProductWeb,
+        icon: const Icon(Icons.manage_search_outlined),
+        label: const Text('Look for this ingredient at retailers'),
       ),
       if (widget.onFindAlternatives != null) ...[
         const SizedBox(height: 8),
@@ -139,7 +157,9 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
       Text('Location is requested only when you search. Your current coordinates are sent to a store-directory provider to locate nearby businesses. No background tracking.',
         style: Theme.of(context).textTheme.bodySmall),
       const SizedBox(height: 8),
-      Text('Google Maps locates stores, not products. Sizes, prices and stock appear only if a connected retailer feed supplies them. Check the store before visiting.',
+      Text('If the store directory cannot load, the Google Maps and retailer '
+          'search buttons above still work. Only an authorized retailer '
+          'catalogue can confirm product sizes, prices or stock.',
         style: Theme.of(context).textTheme.bodySmall),
       if (_error != null) ...[
         const SizedBox(height: 12),
@@ -154,7 +174,9 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
         const SizedBox(height: 12),
         if (data.stores.isEmpty) const Padding(
           padding: EdgeInsets.all(16),
-          child: Text('No stores returned by this directory. Try Google Maps to find more businesses.'),
+          child: Text('This directory has no mapped stores to show right now. '
+              'That does not mean local grocery stores are absent. '
+              'Use the direct Maps or retailer search above.'),
         ),
         ...data.stores.map((store) => Card(
           key: ValueKey(store.id),
