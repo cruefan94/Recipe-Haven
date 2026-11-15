@@ -452,7 +452,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    const pages = [
+    final pages = [
       'Kitchen Home', 'Find Recipes', 'My Cookbook', 'Add Recipe',
       widget.includePrivateCollection ? 'Marijuana Cookbook' : '',
       'Find Ingredient', 'Backup & Restore',
