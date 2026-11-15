@@ -11,4 +11,4 @@ fi
 if [[ -f test/widget_test.dart ]] && grep -q 'MyApp' test/widget_test.dart; then
   rm test/widget_test.dart
 fi
-python3 scripts/configure_android_flavors.py
+python3 scripts/configure_android.py

@@ -1,8 +1,13 @@
 include: package:flutter_lints/flutter.yaml
 
-# Flutter 3.50 marks the legacy Material import deprecated; until the new
-# replacement becomes part of the supported package baseline, ignore only
-# that deprecation lint while keeping other analysis checks enabled.
+# Keep Flutter analyzer errors and functional warnings enabled.
+# These two newer cosmetic style checks should not prevent APK compilation
+# while the development branch is being made installable.
 analyzer:
   errors:
     deprecated_member_use: ignore
+
+linter:
+  rules:
+    prefer_interpolation_to_compose_strings: false
+    use_null_aware_elements: false

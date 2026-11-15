@@ -1,10 +1,10 @@
 name: recipe_haven
-description: Shared cooking app for Babe (Android) and For Mom and Dad (Android and iPhone).
+description: Recipe Haven cooking and shopping app, Android first and iPhone planned.
 publish_to: none
 version: 0.2.0+2
 
 environment:
-  sdk: '>=3.6.0 <4.0.0'
+  sdk: '>=3.10.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -12,8 +12,10 @@ dependencies:
   http: ^1.6.0
   html: ^0.15.7
   shared_preferences: ^2.5.6
+  cryptography: ^2.7.0
   url_launcher: ^6.3.3
   geolocator: ^14.0.2
+  file_picker: ^13.3.3
 
 dev_dependencies:
   flutter_test:
