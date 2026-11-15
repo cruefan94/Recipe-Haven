@@ -444,6 +444,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  // A full JSON backup includes private collection contents in plain text.
+  // Require the private password if such content exists before any export.
+  Future<bool> _authorizeFullBackup() async {
+    final hasPrivate = widget.cookbook.saved.any(
+      (recipe) => recipe.collection == RecipeCollection.marijuana,
+    ) || widget.shopping.items.any(
+      (item) => item.collection == RecipeCollection.marijuana,
+    );
+    if (!hasPrivate) return true;
+    try {
+      if (!await _privatePassword.isConfigured) {
+        _notice('Set a private cookbook password under Options before exporting a full backup.');
+        return false;
+      }
+      if (!mounted) return false;
+      final result = await _promptPassword(creating: false);
+      if (!mounted || result == null) return false;
+      if (!await _privatePassword.verify(result.password)) {
+        _notice('Incorrect password. Backup was not exported.');
+        return false;
+      }
+      return true;
+    } catch (_) {
+      _notice('Could not verify the private password. Backup was not exported.');
+      return false;
+    }
+  }
+
   String _restoreMessage(KitchenImportResult result) {
     final recipes = result.recipesAdded.toString();
     if (result.legacyCookbook) {
@@ -456,7 +484,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _copyBackup() async {
-    if (_fileTransferBusy) return;
+    if (_fileTransferBusy || !await _authorizeFullBackup() || !mounted) return;
     setState(() => _fileTransferBusy = true);
     try {
       final data = KitchenBackupService.exportData(
@@ -529,7 +557,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _saveBackupFile() async {
-    if (_fileTransferBusy) return;
+    if (_fileTransferBusy || !await _authorizeFullBackup() || !mounted) return;
     setState(() => _fileTransferBusy = true);
     try {
       final saved = await KitchenBackupService.saveFile(
@@ -567,13 +595,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold)),
       const SizedBox(height: 10),
-      const Text('One private JSON backup includes both saved recipe '
-          'collections, ingredient lists, cooking steps, and your shopping '
-          'list with checked items. Use this before switching to Babe Stable.'),
+      const Text('A full JSON backup includes saved recipes, ingredient '
+          'lists, cooking steps and shopping items, including private '
+          'entries. The private password is required when protected '
+          'entries are included. The exported file is not encrypted.'),
       const SizedBox(height: 12),
       Text(widget.cookbook.saved.where((recipe) => recipe.collection == RecipeCollection.general).length.toString() +
           ' saved recipes  •  ' +
-          widget.shopping.items.length.toString() + ' shopping items',
+          widget.shopping.items.where((item) => item.collection == RecipeCollection.general).length.toString() + ' shopping items',
           style: Theme.of(context).textTheme.titleMedium),
       const SizedBox(height: 20),
       FilledButton.icon(
