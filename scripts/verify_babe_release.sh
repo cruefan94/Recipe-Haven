@@ -37,6 +37,9 @@ expected="$(keytool -list -v \
   -storepass:env RECIPE_HAVEN_RELEASE_STORE_PASSWORD \
   | awk -F 'SHA256: ' '/SHA256:/ {print $2; exit}' \
   | tr -d ':\r' | tr '[:upper:]' '[:lower:]')"
+# Certificate hashes are public; logging them helps diagnose signer selection.
+echo "APK public certificate SHA-256: $actual"
+echo "Keystore public certificate SHA-256: $expected"
 if [[ -z "$actual" || -z "$expected" || "$actual" != "$expected" ]]; then
   echo "::error::APK signing certificate does not match supplied keystore"
   exit 1
