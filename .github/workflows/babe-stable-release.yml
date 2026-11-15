@@ -1,6 +1,6 @@
-name: Babe Stable — Permanently Signed APK (Manual)
+name: Recipe Haven — Android Stable Release (Manual)
 
-# Default-branch entry point. Must be manually approved by repository owner.
+# Default-branch entry point for the one Recipe Haven Android app.
 # The development branch is checked out intentionally; no unreviewed PR input.
 on:
   workflow_dispatch:
@@ -33,7 +33,7 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout Babe Android source
+      - name: Checkout Recipe Haven Android source
         uses: actions/checkout@v4
         with:
           ref: feature/ingredient-products-and-cookbook-backup
@@ -57,7 +57,7 @@ jobs:
       - name: Flutter dependencies
         run: flutter pub get
 
-      - name: Generate Android platform and Babe Stable flavor
+      - name: Generate Android platform
         run: bash scripts/bootstrap_android.sh
 
       - name: Flutter analysis
@@ -89,7 +89,7 @@ jobs:
             -storepass:env RECIPE_HAVEN_RELEASE_STORE_PASSWORD >/dev/null
           echo "RECIPE_HAVEN_RELEASE_KEYSTORE=$key" >> "$GITHUB_ENV"
 
-      - name: Compile permanently signed Babe Stable APK
+      - name: Compile permanently signed Recipe Haven APK
         shell: bash
         env:
           # Workaround limited to release-build lintVital JavaDoc parser crash.
@@ -117,12 +117,12 @@ jobs:
         run: |
           mkdir -p stable-release
           cp build/app/outputs/flutter-apk/app-babestable-release.apk \
-            stable-release/Babe-STABLE-Permanent-Updates.apk
+            stable-release/Recipe-Haven-Android-STABLE.apk
 
-      - name: Upload private-key-signed Babe Stable APK
+      - name: Upload signed Recipe Haven Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: Babe-STABLE-Permanently-Signed-APK
+          name: Recipe-Haven-Android-STABLE-APK
           path: stable-release/*.apk
           if-no-files-found: error
           retention-days: 30
