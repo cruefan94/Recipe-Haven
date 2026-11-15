@@ -2,7 +2,12 @@
 # Verify Recipe Haven package identity AND exact signing-key certificate.
 set -euo pipefail
 
-apk="${1:?Usage: verify_android_release.sh PATH_TO_APK}"
+apk="${1:?Usage: verify_android_release.sh PATH_TO_APK EXPECTED_PACKAGE_ID}"
+expected_package="${2:?Usage: verify_android_release.sh PATH_TO_APK EXPECTED_PACKAGE_ID}"
+case "$expected_package" in
+  com.cruefan94.recipe_haven|com.cruefan94.recipe_haven.full) ;;
+  *) echo "::error::Unexpected Recipe Haven package identity"; exit 1 ;;
+esac
 test -s "$apk" || { echo "::error::Stable APK is missing or empty"; exit 1; }
 : "$RECIPE_HAVEN_RELEASE_KEYSTORE"
 : "$RECIPE_HAVEN_RELEASE_STORE_PASSWORD"
@@ -21,8 +26,8 @@ test -n "$signer" && test -n "$aapt" || {
 badging="$("$aapt" dump badging "$apk")"
 package="$(printf '%s\n' "$badging" | grep '^package: ' | head -1)"
 case "$package" in
-  *"name='com.cruefan94.recipe_haven'"*) ;;
-  *) echo "::error::APK is not Recipe Haven ($package)"; exit 1 ;;
+  *"name='$expected_package'"*) ;;
+  *) echo "::error::Expected $expected_package but found $package"; exit 1 ;;
 esac
 version="$(printf '%s\n' "$package" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")"
 if [[ -z "$version" || "$version" -le 50000 ]]; then
@@ -53,5 +58,5 @@ if [[ -z "$actual" || -z "$expected" || "$actual" != "$expected" ]]; then
   exit 1
 fi
 
-echo "Verified Recipe Haven package ID, versionCode $version, signed APK and signing certificate."
+echo "Verified $expected_package, versionCode $version, signed APK and signing certificate."
 echo "Public signing certificate SHA-256: $actual"

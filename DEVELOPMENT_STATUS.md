@@ -41,21 +41,23 @@ can time out, have missing locations, or supply partial-radius results.
 
 ## Build verification
 
-The latest confirmed successful signed Professional APK at this checkpoint is
-GitHub Actions [run #66](https://github.com/cruefan94/Recipe-Haven/actions/runs/43764869438)
-(2026-11-15). Flutter analysis, automated tests, release compilation,
-package-ID verification, signing-certificate verification and artifact upload
-all **passed**.
+User-approved November 15 directive: produce **both Android editions** in every
+new automatic test build, incorporating the latest ingredient-finder improvements.
+The workflow now builds and separately uploads a Professional and a Full APK
+from the same source, using the existing protected signing key and independent
+package IDs. Both APK package names and signing certificates are validated by CI.
 
-Artifact: `Recipe-Haven-Professional-Android-TEST` containing
-`Recipe-Haven-Professional-Android-TEST.apk`.
-This is a new-install Professional APK; subsequent same-package, same-key
-versions can upgrade in place. **No phone install or hardware test is yet
-claimed.** Full has not been released as the next APK.
+- `Recipe-Haven-Professional-Android-TEST` contains `Recipe-Haven-Professional-Android-TEST.apk`.
+- `Recipe-Haven-Full-Android-TEST` contains `Recipe-Haven-Full-Android-TEST.apk`.
 
-A further automated widget regression test is being added for the radius
-selector and visible nearby-store list. Newer workflow runs must be
-independently checked before describing them as successful.
+The most recently verified successful **Professional-only** build before this
+workflow change was [run #71](https://github.com/cruefan94/Recipe-Haven/actions/runs/43767391150).
+The first **two-edition** build must pass GitHub Actions before either newly
+produced installer is described as available. Full requires phone validation
+of the Options password flow and separate app data; Professional must have
+no access to that collection. The ingredient-finder fix requires real-device
+testing against public store providers. Neither build success nor mock tests
+guarantee live store listings.
 
 ## Immediate Android acceptance checks
 
@@ -76,7 +78,7 @@ independently checked before describing them as successful.
 - Preserve permanent Android signing key; do not regenerate or expose secrets.
 - Keep Professional source and release output free of Full-only navigation.
 - Continue professional UI refinement after functional validation.
-- Release the separate Full APK only once Professional is validated.
+- Build both signed APKs on the same development commit and phone-test each edition separately.
 - Prepare iOS builds and TestFlight after the Android release is stable.
 
 Older personalized-era documents in `docs/` are historical development

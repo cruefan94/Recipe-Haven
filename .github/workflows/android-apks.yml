@@ -1,4 +1,4 @@
-name: Recipe Haven Professional — Android Test APK
+name: Recipe Haven — Professional and Full Android Test APKs
 
 on:
   push:
@@ -8,9 +8,9 @@ on:
 permissions:
   contents: read
 
-# New pushes supersede older test builds so we publish the latest APK only.
+# New pushes supersede older test builds so both editions come from one commit.
 concurrency:
-  group: recipe-haven-professional-test-apk
+  group: recipe-haven-two-editions-test-apks
   cancel-in-progress: true
 
 jobs:
@@ -59,7 +59,7 @@ jobs:
           keytool -list -keystore "$key" -alias "$RECIPE_HAVEN_RELEASE_KEY_ALIAS" \
             -storepass:env RECIPE_HAVEN_RELEASE_STORE_PASSWORD >/dev/null
           echo "RECIPE_HAVEN_RELEASE_KEYSTORE=$key" >> "$GITHUB_ENV"
-      - name: Compile signed Professional Android APK
+      - name: Compile signed Professional and Full Android APKs
         shell: bash
         env:
           RECIPE_HAVEN_RELEASE_LINT_WORKAROUND: '1'
@@ -69,26 +69,45 @@ jobs:
         run: |
           set -euo pipefail
           version=$((50000 + GITHUB_RUN_NUMBER * 10 + GITHUB_RUN_ATTEMPT))
-          flutter build apk --release --flavor professional \
-            --dart-define=RECIPE_HAVEN_EDITION=professional \
-            --build-name=1.0.0 --build-number="$version"
-      - name: Verify package ID and permanent signing certificate
+          for edition in professional full; do
+            flutter build apk --release --flavor "$edition" \
+              --dart-define="RECIPE_HAVEN_EDITION=$edition" \
+              --build-name=1.0.0 --build-number="$version"
+          done
+      - name: Verify both package IDs and permanent signing certificates
         shell: bash
         env:
           RECIPE_HAVEN_RELEASE_STORE_PASSWORD: ${{ secrets.RECIPE_HAVEN_RELEASE_STORE_PASSWORD }}
           RECIPE_HAVEN_RELEASE_KEY_ALIAS: ${{ secrets.RECIPE_HAVEN_RELEASE_KEY_ALIAS }}
-        run: bash scripts/verify_android_release.sh build/app/outputs/flutter-apk/app-professional-release.apk
-      - name: Prepare new downloadable APK
+        run: |
+          set -euo pipefail
+          bash scripts/verify_android_release.sh \
+            build/app/outputs/flutter-apk/app-professional-release.apk \
+            com.cruefan94.recipe_haven
+          bash scripts/verify_android_release.sh \
+            build/app/outputs/flutter-apk/app-full-release.apk \
+            com.cruefan94.recipe_haven.full
+      - name: Prepare separately named APK downloads
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p release-test
           cp build/app/outputs/flutter-apk/app-professional-release.apk \
             release-test/Recipe-Haven-Professional-Android-TEST.apk
-      - name: Upload Professional Android test APK only
+          cp build/app/outputs/flutter-apk/app-full-release.apk \
+            release-test/Recipe-Haven-Full-Android-TEST.apk
+      - name: Upload Professional Android test APK
         uses: actions/upload-artifact@v4
         with:
           name: Recipe-Haven-Professional-Android-TEST
-          path: release-test/*.apk
+          path: release-test/Recipe-Haven-Professional-Android-TEST.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload Full Android test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Recipe-Haven-Full-Android-TEST
+          path: release-test/Recipe-Haven-Full-Android-TEST.apk
           if-no-files-found: error
           retention-days: 30
       - name: Remove private key from runner

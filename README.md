@@ -4,12 +4,12 @@
 
 | Edition | Android launcher name | Cooking features | Separate personal cookbook | Current APK |
 | --- | --- | --- | --- | --- |
-| **Professional** | **Recipe Haven** | Recipes, offline recipes, cookbook, ingredient finder, substitutions, shopping list, backup/restore | **Not included. No visible references or entry points.** | **Next signed APK for phone testing** |
-| **Full** | **Recipe Haven Full** | All Professional features | Includes a separate password-protected personal collection and its shopping list | Separate APK can be built later |
+| **Professional** | **Recipe Haven** | Recipes, offline recipes, cookbook, ingredient finder, substitutions, shopping list, backup/restore | **Not included. No visible references or entry points.** | **Signed Android test APK** |
+| **Full** | **Recipe Haven Full** | All Professional features | Includes a separate password-protected personal collection and its shopping list | **Signed Android test APK** |
 
 The Professional edition is suitable for workplace and general-purpose cooking contexts. It does not show the Full edition's extra collection in the home screen, Options, recipe entry, backup messaging, or navigation. Importing a backup containing unsupported collection entries is rejected with a neutral message before any data is changed; Professional exports only its everyday recipes and shopping items.
 
-**The next downloadable APK is Professional only.** The Full edition remains implemented in shared Flutter source as a distinct Android flavor, but is not included in the next download artifact. Both editions can be installed side by side without mixing their private app storage.
+**Every new Android test workflow run now produces both editions from the same source commit**, each as its own APK download. Both editions can be installed side by side without mixing their private app storage. The Full-only collection is accessible from Options after setting or entering a user-chosen password; Professional has no access point.
 
 ## Android identities and signing
 
@@ -32,9 +32,12 @@ Both reuse the owner's existing permanent Android signing keystore through prote
 
 ## Build and test
 
-The automatic [Professional Android APK workflow](.github/workflows/android-apks.yml) is triggered on the Android development branch. It runs Flutter analysis and tests, compiles one **permanently signed Professional APK** and checks its Android package ID and certificate against the existing private keystore before uploading the installer artifact.
+The automatic [Professional and Full Android APK workflow](.github/workflows/android-apks.yml) is triggered on the Android development branch. It runs Flutter analysis and tests, compiles **both permanently signed APKs from the same commit**, verifies each Android package ID and both signing certificates against the existing private keystore, then uploads **two separate installers**:
 
-**Download artifact:** `Recipe-Haven-Professional-Android-TEST`, containing `Recipe-Haven-Professional-Android-TEST.apk`.
+- `Recipe-Haven-Professional-Android-TEST` containing `Recipe-Haven-Professional-Android-TEST.apk`.
+- `Recipe-Haven-Full-Android-TEST` containing `Recipe-Haven-Full-Android-TEST.apk`.
+
+Both variants include the latest ingredient-finder timeout, provider fallback and radius-selection changes. GitHub compilation does not guarantee in-app store-directory availability or physical-phone compatibility.
 
 Manual Flutter commands after `flutter pub get` and `bash scripts/bootstrap_android.sh`:
 
@@ -61,6 +64,6 @@ The repository retains an iOS preparation scaffold for future use. On macOS/Xcod
 2. Fix any in-app grocery-store list gaps, keyboard flicker, layout clipping and search issues observed on Android.
 3. Continue polish for professional everyday use and confirm reliable backups.
 4. Preserve permanent-signing continuity for subsequent releases.
-5. Release the Full edition separately after Professional is verified, then pursue iPhone support.
+5. Phone-test the separately signed Full edition, including password creation, unlocking, relocking, and independent cookbook storage; then pursue iPhone support.
 
 The Recipe Haven project is independent from the user's Flipper and other unrelated repositories.
