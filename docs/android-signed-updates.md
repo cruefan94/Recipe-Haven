@@ -50,3 +50,9 @@ Keep the secrets **unchanged** for future releases. The GitHub connector cannot 
 The automatic Android test workflow builds **Babe only**. The other editions remain in the source tree but are paused. Test APKs still use ephemeral GitHub debug keys, so they are for installation/testing only and may not update one another.
 
 Do not claim successful stable in-place upgrades until two consecutively signed Babe Stable APKs have been installed as an update on a real device and its cookbook has been preserved.
+
+## Additional side-by-side testing APK
+
+Before the private stable signing key is configured, the **automatic** Babe Android test workflow builds an independent **Babe Preview** debug APK with package ID `com.cruefan94.recipe_haven.babe.preview`, labeled **Recipe Haven 💛 Preview**.
+
+This allows the user to install and try the newest ingredient/store and recipe-search fixes **without uninstalling the current Babe app**. It is not an in-place update, has its **own separate cookbook data**, and is still signed with an ephemeral debug key: do not store irreplaceable recipes in the Preview edition because a future Preview build might not update it. Export any important Preview recipes before reinstalling. The long-term solution remains Babe Stable with a private, unchanged release signing key.

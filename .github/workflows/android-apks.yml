@@ -33,19 +33,20 @@ jobs:
         run: flutter analyze
       - name: Test
         run: flutter test
-      - name: Build Babe Android test APK
+      - name: Build Babe Android side-by-side preview APK
         shell: bash
         run: |
           set -euo pipefail
           code=$((20000 + GITHUB_RUN_NUMBER))
-          flutter build apk --debug --flavor babe --dart-define=EDITION=babe --build-number="$code"
+          # Different package ID: can install without removing existing Babe.
+          flutter build apk --debug --flavor babePreview --dart-define=EDITION=babe --build-number="$code"
       - name: Label APKs
         run: |
           mkdir -p release-test
-          cp build/app/outputs/flutter-apk/app-babe-debug.apk release-test/Babe-Android-TEST.apk
+          cp build/app/outputs/flutter-apk/app-babePreview-debug.apk release-test/Babe-Android-PREVIEW-KEEP-OLD-APP.apk
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: RecipeHaven-Babe-Android-TEST-APK
+          name: RecipeHaven-Babe-Parallel-PREVIEW-APK
           path: release-test/*.apk
           retention-days: 30

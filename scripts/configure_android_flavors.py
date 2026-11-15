@@ -27,6 +27,10 @@ if 'create("babe")' not in s:
             dimension = "edition"
             applicationIdSuffix = ".babe.stable"
         }
+        create("babePreview") {
+            dimension = "edition"
+            applicationIdSuffix = ".babe.preview"
+        }
     }
 '''
     if 'android {' not in s:
@@ -44,6 +48,14 @@ if 'create("babeStable")' not in s:
                   'productFlavors {\n'
                   '        create("babeStable") { dimension = "edition"; '
                   'applicationIdSuffix = ".babe.stable" }', 1)
+
+# A separate preview app ID keeps the user's original Babe APK installed
+# during feature testing. Preview builds are still ephemeral-debug-signed.
+if 'create("babePreview")' not in s:
+    s = s.replace('productFlavors {',
+                  'productFlavors {\n'
+                  '        create("babePreview") { dimension = "edition"; '
+                  'applicationIdSuffix = ".babe.preview" }', 1)
 
 # Persistent release signing is optional and never activated for normal debug
 # builds. The keystore remains outside the repository and is supplied by
@@ -112,6 +124,7 @@ for flavor, label in [
     ('momdad', 'For Mom and Dad'),
     ('babe', 'Recipe Haven 💛'),
     ('babeStable', 'Recipe Haven 💛 New'),
+    ('babePreview', 'Recipe Haven 💛 Preview'),
 ]:
     strings = root / 'android/app/src' / flavor / 'res/values/strings.xml'
     strings.parent.mkdir(parents=True, exist_ok=True)
