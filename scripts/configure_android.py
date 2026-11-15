@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Configure one Recipe Haven Android app without editions or flavors."""
+"""Configure two Recipe Haven Android variants: Professional and Full."""
 from pathlib import Path
 import re
 
@@ -12,6 +12,22 @@ if not gradle.exists() or not manifest.exists():
 s = gradle.read_text()
 if 'applicationId = "com.cruefan94.recipe_haven"' not in s:
     raise SystemExit('Unexpected Android application ID: expected com.cruefan94.recipe_haven.')
+# Two Recipe Haven variants: Professional keeps the base package ID.
+# Full installs independently with its own app data.
+if 'create("professional")' not in s:
+    s = s.replace('android {', '''android {
+    flavorDimensions += "edition"
+    productFlavors {
+        create("professional") {
+            dimension = "edition"
+        }
+        create("full") {
+            dimension = "edition"
+            applicationIdSuffix = ".full"
+        }
+    }
+''', 1)
+
 # Persistent release signing is optional and never activated for normal debug
 # builds. The keystore remains outside the repository and is supplied by
 # protected GitHub Actions secrets (or a local environment).
@@ -115,8 +131,13 @@ target.parent.mkdir(parents=True, exist_ok=True)
 target.write_text(template.read_text())
 
 
-strings = root / 'android/app/src/main/res/values/strings.xml'
-strings.parent.mkdir(parents=True, exist_ok=True)
-strings.write_text('<?xml version="1.0" encoding="utf-8"?>\n'
-                   '<resources><string name="app_name">Recipe Haven</string></resources>\n')
-print('Recipe Haven Android single app: com.cruefan94.recipe_haven')
+for flavor, label in [
+    ('professional', 'Recipe Haven'),
+    ('full', 'Recipe Haven Full'),
+]:
+    strings = root / 'android/app/src' / flavor / 'res/values/strings.xml'
+    strings.parent.mkdir(parents=True, exist_ok=True)
+    strings.write_text('<?xml version="1.0" encoding="utf-8"?>\\n'
+                       '<resources><string name="app_name">%s</string></resources>\\n'
+                       % label)
+print('Recipe Haven Android: Professional and Full variants ready.')
