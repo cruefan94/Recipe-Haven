@@ -155,11 +155,94 @@ class RecipeSearchService {
     );
   }
 
+  /// Normalize common dish aliases and small user typos for comparison.
+  /// Keep multi-word queries conjunctive: all important dish words must
+  /// appear in a title, not just one of them.
+  static String _recipeWord(String word) {
+    return switch (word) {
+      'parm' || 'parmigiana' || 'parmigiano' => 'parmesan',
+      'checking' || 'chickens' => 'chicken',
+      'alfredo' => 'alfredo',
+      _ => word,
+    };
+  }
+
+  static List<String> _recipeTerms(String query) {
+    const ignored = {'recipe', 'recipes', 'a', 'an', 'the', 'of',
+      'with', 'how', 'to', 'make', 'easy', 'best', 'for'};
+    final terms = <String>[];
+    for (final raw in query.toLowerCase().split(RegExp(r'[^a-z0-9]+'))) {
+      if (raw.isEmpty || ignored.contains(raw)) continue;
+      final term = _recipeWord(raw);
+      if (!terms.contains(term)) terms.add(term);
+    }
+    return terms;
+  }
+
+  /// Public for unit tests and use in future recipe-result components.
+  /// Unknown/broad WordPress matches never get a positive score unless
+  /// their visible recipe title actually contains the requested dish words.
+  static int recipeRelevance(Recipe recipe, String query) {
+    final terms = _recipeTerms(query);
+    if (terms.isEmpty) return 0;
+    final titleWords = recipe.title.toLowerCase()
+        .split(RegExp(r'[^a-z0-9]+'))
+        .where((word) => word.isNotEmpty)
+        .map(_recipeWord).toSet();
+    final matches = terms.where(titleWords.contains).length;
+    if (matches != terms.length) return 0;
+    final original = query.toLowerCase().trim();
+    final title = recipe.title.toLowerCase().trim();
+    if (title == original) return 100;
+    if (title.startsWith(original)) return 90;
+    // "Chicken Parmesan" is a better result for "Parmesan chicken"
+    // than e.g. "Dinner with Parmesan Chicken, Rice and Soup".
+    return 65 + (terms.length * 3) -
+        (titleWords.length - terms.length).clamp(0, 20);
+  }
+
+  List<String> _mealSearchVariants(String query) {
+    final variants = <String>[query];
+    final terms = _recipeTerms(query);
+    if (terms.length == 2) {
+      final reordered = terms.reversed.join(' ');
+      if (reordered.toLowerCase() != query.toLowerCase()) {
+        variants.add(reordered);
+      }
+      if (terms.contains('chicken') && terms.contains('parmesan')) {
+        variants.add('Chicken Parmigiana');
+        variants.add('Chicken Parmesan');
+      }
+    }
+    return variants.map((s) => s.trim()).where((s) => s.isNotEmpty)
+        .toSet().take(4).toList();
+  }
+
+  Future<List<Recipe>> _mealDbForDish(String query) async {
+    final found = <String, Recipe>{};
+    var succeeded = false;
+    for (final variant in _mealSearchVariants(query)) {
+      try {
+        final results = await _mealDb(variant);
+        succeeded = true;
+        for (final recipe in results) {
+          found.putIfAbsent(recipe.id, () => recipe);
+        }
+      } catch (_) {
+        // A single unavailable variant must not hide other valid matches.
+      }
+    }
+    if (!succeeded) {
+      throw StateError('TheMealDB could not answer this search.');
+    }
+    return found.values.toList();
+  }
+
   Future<SearchResults> search(String input) async {
     final query = input.trim();
-    if (query.isEmpty) return const SearchResults([], []);
+    if (_recipeTerms(query).isEmpty) return const SearchResults([], []);
     final futures = <Future<List<Recipe>>>[
-      _mealDb(query),
+      _mealDbForDish(query),
       _dummyJson(query),
       ..._sites.entries.map((site) => _wordpress(site.key, site.value, query)),
     ];
@@ -168,20 +251,19 @@ class RecipeSearchService {
       try { return (await f, false); } catch (_) { return (<Recipe>[], true); }
     }));
     final failed = <String>[];
-    final found = <Recipe>[];
-    for (var i = 0; i < results.length; i++) {
-      found.addAll(results[i].$1);
-      if (results[i].$2) failed.add(sourceNames[i]);
-    }
     final unique = <String, Recipe>{};
-    for (final r in found) {
-      unique.putIfAbsent(r.id, () => r);
+    for (var i = 0; i < results.length; i++) {
+      if (results[i].$2) failed.add(sourceNames[i]);
+      for (final recipe in results[i].$1) {
+        if (recipeRelevance(recipe, query) > 0) {
+          unique.putIfAbsent(recipe.id, () => recipe);
+        }
+      }
     }
     final sorted = unique.values.toList()..sort((a, b) {
-      final aStarts = a.title.toLowerCase().startsWith(query.toLowerCase());
-      final bStarts = b.title.toLowerCase().startsWith(query.toLowerCase());
-      if (aStarts != bStarts) return aStarts ? -1 : 1;
-      return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+      final rank = recipeRelevance(b, query).compareTo(recipeRelevance(a, query));
+      return rank != 0 ? rank :
+          a.title.toLowerCase().compareTo(b.title.toLowerCase());
     });
     return SearchResults(sorted, failed);
   }
