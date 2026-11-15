@@ -92,6 +92,9 @@ jobs:
       - name: Compile permanently signed Babe Stable APK
         shell: bash
         env:
+          # Workaround limited to release-build lintVital JavaDoc parser crash.
+          # Flutter static analysis and unit tests remain mandatory.
+          RECIPE_HAVEN_RELEASE_LINT_WORKAROUND: '1'
           RECIPE_HAVEN_RELEASE_STORE_PASSWORD: ${{ secrets.RECIPE_HAVEN_RELEASE_STORE_PASSWORD }}
           RECIPE_HAVEN_RELEASE_KEY_ALIAS: ${{ secrets.RECIPE_HAVEN_RELEASE_KEY_ALIAS }}
           RECIPE_HAVEN_RELEASE_KEY_PASSWORD: ${{ secrets.RECIPE_HAVEN_RELEASE_KEY_PASSWORD }}
