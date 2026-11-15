@@ -31,6 +31,8 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
   Position? _position;
   bool _busy = false;
   String? _error;
+  int _radiusKm = 10;
+  static const List<int> _radiusOptions = [2, 5, 10, 20, 30, 50];
 
   @override
   void dispose() {
@@ -51,7 +53,7 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
       throw StateError("Location permission is blocked. Enable it in your phone's app settings.");
     }
     if (permission == LocationPermission.denied) {
-      throw StateError('Location access is needed to filter stores within 30 km.');
+      throw StateError('Location permission is needed to list nearby stores.');
     }
     return Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium,
@@ -69,7 +71,8 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
     try {
       final position = await _getPosition();
       final results = await _locator.nearby(position.latitude, position.longitude,
-        ingredient: _ingredient.text.trim());
+        ingredient: _ingredient.text.trim(),
+        searchRadiusKm: _radiusKm.toDouble());
       if (!mounted) return;
       setState(() { _position = position; _found = results; });
     } catch (e) {
@@ -111,10 +114,8 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
   Widget build(BuildContext context) {
     final data = _found;
     return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
-      Text('Find Ingredient', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-      const SizedBox(height: 8),
-      const Text('Find nearby grocery stores within 30 km, or search for an '
-          'ingredient on retailer websites. A store listing does not guarantee stock.'),
+      const Text('Find grocery stores nearby, or search for an ingredient '
+          'online. Store listings do not confirm product stock.'),
       const SizedBox(height: 14),
       TextField(
         controller: _ingredient,
@@ -127,10 +128,33 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
         ),
       ),
       const SizedBox(height: 12),
+      Row(children: [
+        const Expanded(child: Text('Search radius',
+          style: TextStyle(fontWeight: FontWeight.w600))),
+        const SizedBox(width: 12),
+        DropdownButton<int>(
+          key: const ValueKey('ingredient-search-radius'),
+          value: _radiusKm,
+          underline: const SizedBox.shrink(),
+          items: _radiusOptions.map((km) => DropdownMenuItem<int>(
+            value: km, child: Text('$km km'),
+          )).toList(),
+          onChanged: _busy ? null : (km) {
+            if (km == null) return;
+            setState(() {
+              _radiusKm = km;
+              _found = null;
+              _error = null;
+            });
+          },
+        ),
+      ]),
+      const SizedBox(height: 10),
       FilledButton.icon(
         onPressed: _busy ? null : _find,
         icon: _busy ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.location_on_outlined),
-        label: Text(_busy ? 'Finding nearby stores…' : 'Find stores within 30 km'),
+        label: Text(_busy ? 'Finding nearby stores…'
+          : 'Find stores within $_radiusKm km'),
         style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
       ),
       const SizedBox(height: 8),
@@ -163,13 +187,35 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
         style: Theme.of(context).textTheme.bodySmall),
       if (_error != null) ...[
         const SizedBox(height: 12),
-        Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        Card(child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(_error!, style: TextStyle(
+              color: Theme.of(context).colorScheme.error)),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _find,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry store list'),
+            ),
+          ]),
+        )),
       ],
       if (data != null) ...[
         const SizedBox(height: 20),
-        Text('${data.stores.length} stores within 30 km',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-        Text('Store directory: ${data.provider}. Distances are straight-line, not driving distance.',
+        Text('Nearby stores (${data.stores.length})',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold)),
+        if (data.isPartial) ...[
+          const SizedBox(height: 6),
+          Text('Partial results: ${data.requestedRadiusKm.toInt()} km search '
+              'was unavailable. Showing stores within '
+              '${data.searchedRadiusKm.toInt()} km instead.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.tertiary)),
+        ],
+        Text('Searched ${data.searchedRadiusKm.toInt()} km · '
+            '${data.provider} · straight-line distance.',
           style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 12),
         if (data.stores.isEmpty) const Padding(
