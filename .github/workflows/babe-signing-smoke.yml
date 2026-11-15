@@ -47,6 +47,9 @@ jobs:
           echo "RECIPE_HAVEN_RELEASE_KEY_ALIAS=babe-ci-disposable" >> "$GITHUB_ENV"
       - name: Build signed Stable for CI verification only
         shell: bash
+        env:
+          # Work around a release-only Android lint JavaDoc parser crash.
+          RECIPE_HAVEN_RELEASE_LINT_WORKAROUND: '1'
         run: |
           set -euo pipefail
           code=$((30000 + GITHUB_RUN_NUMBER * 10 + GITHUB_RUN_ATTEMPT))

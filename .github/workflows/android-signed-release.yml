@@ -53,6 +53,8 @@ jobs:
         run: flutter test
       - name: Build signed Babe Stable APK
         shell: bash
+        env:
+          RECIPE_HAVEN_RELEASE_LINT_WORKAROUND: '1'
         run: |
           set -euo pipefail
           code=$((30000 + GITHUB_RUN_NUMBER * 10 + GITHUB_RUN_ATTEMPT))
