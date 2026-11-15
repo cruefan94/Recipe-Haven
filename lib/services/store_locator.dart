@@ -190,7 +190,9 @@ class StoreLocator {
           final pointLat = (center['lat'] as num?)?.toDouble();
           final pointLon = (center['lon'] as num?)?.toDouble();
           if (pointLat == null || pointLon == null || !pointLat.isFinite ||
-              !pointLon.isFinite) continue;
+              !pointLon.isFinite) {
+            continue;
+          }
           final distance = distanceKm(lat, lon, pointLat, pointLon);
           if (distance > radiusKm) continue;
           final id = 'osm:${item['type']}:${item['id']}';
