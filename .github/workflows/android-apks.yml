@@ -8,9 +8,10 @@ on:
 permissions:
   contents: read
 
+# New pushes supersede older test builds so we publish the latest APK only.
 concurrency:
-  group: recipe-haven-fresh-apk
-  cancel-in-progress: false
+  group: recipe-haven-professional-test-apk
+  cancel-in-progress: true
 
 jobs:
   android:
