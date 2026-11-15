@@ -14,6 +14,7 @@ import 'pantry_cooking_screen.dart';
 import 'babe_starter_recipes_screen.dart';
 import 'shopping_list_screen.dart';
 import '../services/incoming_recipe_share.dart';
+import '../services/private_cookbook_password.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.cookbook, required this.shopping});
@@ -24,8 +25,11 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _page = 0; // Kitchen dashboard; each cooking tool has its own full-screen page.
+  final _privatePassword = PrivateCookbookPassword();
+  bool _privateUnlocked = false;
+  bool _unlockBusy = false;
   final _search = TextEditingController();
   final _cookbookFilter = TextEditingController();
   final _marijuanaFilter = TextEditingController();
@@ -45,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.cookbook.addListener(_refresh);
     widget.shopping.addListener(_refresh);
     IncomingRecipeShare.instance.addListener(_receiveSharedLink);
@@ -59,6 +64,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (url == null) return;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
+      _privateUnlocked = false;
+      _marijuanaFilter.clear();
       _newRecipeCollection = RecipeCollection.general;
       _sharedRecipeUrl = url;
       _shareSerial++;
@@ -70,8 +77,132 @@ class _HomeScreenState extends State<HomeScreen> {
   void _refresh() { if (mounted) setState(() {}); }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed || !mounted) return;
+    if (_privateUnlocked || _newRecipeCollection == RecipeCollection.marijuana) {
+      // Close protected recipe detail routes before showing public UI.
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      setState(() {
+        _privateUnlocked = false;
+        _newRecipeCollection = RecipeCollection.general;
+        _marijuanaFilter.clear();
+        _shareSerial++;
+        _page = 0;
+      });
+    }
+  }
+
+  Future<({String password, String confirmation})?> _promptPassword({
+    required bool creating,
+  }) async {
+    final password = TextEditingController();
+    final confirmation = TextEditingController();
+    try {
+      return await showDialog<({String password, String confirmation})>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: Text(creating ? 'Set private cookbook password' : 'Unlock private cookbook'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(creating
+                ? 'Choose at least 8 characters. Your password cannot be recovered. Keep a private record of it.'
+                : 'Enter your personal password to open the private collection.'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: password,
+                obscureText: true,
+                enableSuggestions: false,
+                autocorrect: false,
+                textInputAction: creating ? TextInputAction.next : TextInputAction.done,
+                decoration: const InputDecoration(labelText: 'Password'),
+              ),
+              if (creating) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: confirmation,
+                  obscureText: true,
+                  enableSuggestions: false,
+                  autocorrect: false,
+                  textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(labelText: 'Confirm password'),
+                ),
+              ],
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog, (
+                password: password.text,
+                confirmation: confirmation.text,
+              )),
+              child: Text(creating ? 'Create password' : 'Unlock'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      password.dispose();
+      confirmation.dispose();
+    }
+  }
+
+  Future<void> _openPrivateCookbook() async {
+    if (_unlockBusy) return;
+    setState(() => _unlockBusy = true);
+    try {
+      final configured = await _privatePassword.isConfigured;
+      if (!mounted) return;
+      final result = await _promptPassword(creating: !configured);
+      if (!mounted || result == null) return;
+      if (!configured) {
+        if (result.password != result.confirmation) {
+          throw const FormatException('The passwords do not match.');
+        }
+        await _privatePassword.create(result.password);
+      } else if (!await _privatePassword.verify(result.password)) {
+        _notice('Incorrect password. Please try again.');
+        return;
+      }
+      if (!mounted) return;
+      FocusManager.instance.primaryFocus?.unfocus();
+      setState(() {
+        _privateUnlocked = true;
+        _page = 4;
+      });
+    } on FormatException catch (error) {
+      _notice(error.message.toString());
+    } catch (_) {
+      _notice('Could not unlock the private cookbook. Please try again.');
+    } finally {
+      if (mounted) setState(() => _unlockBusy = false);
+    }
+  }
+
+  Widget _optionsPage() => ListView(
+    padding: const EdgeInsets.fromLTRB(18, 20, 18, 30),
+    children: [
+      Text('Options', style: Theme.of(context).textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.w800)),
+      const SizedBox(height: 16),
+      Card(child: ListTile(
+        leading: const Icon(Icons.lock_outline_rounded),
+        title: const Text('Private Cookbook'),
+        subtitle: const Text('Open a collection protected by your personal password.'),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: _unlockBusy ? null : _openPrivateCookbook,
+      )),
+      const SizedBox(height: 12),
+      Text('Your password controls access inside this app. '
+        'Saved recipes and exported backup files are not encrypted.',
+        style: Theme.of(context).textTheme.bodySmall),
+    ],
+  );
+
+  @override
   void dispose() {
     _searchSequence++;
+    WidgetsBinding.instance.removeObserver(this);
     _search.dispose();
     _cookbookFilter.dispose();
     _marijuanaFilter.dispose();
@@ -95,6 +226,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _search.text = query;
     final local = RecipeSearchService.offlineSuggestions(query);
     setState(() {
+      _privateUnlocked = false;
+      _marijuanaFilter.clear();
       _page = 1;
       _loading = true;
       _searched = query;
@@ -127,14 +260,22 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) { _notice('Could not save changes. Please try again.'); }
   }
 
-  void _open(Recipe recipe) => Navigator.push(context, MaterialPageRoute<void>(builder: (_) =>
-    RecipeDetailScreen(recipe: recipe, cookbook: widget.cookbook,
-      shopping: widget.shopping)));
+  void _open(Recipe recipe) {
+    if (recipe.collection == RecipeCollection.marijuana && !_privateUnlocked) return;
+    Navigator.push(context, MaterialPageRoute<void>(builder: (_) =>
+      RecipeDetailScreen(recipe: recipe, cookbook: widget.cookbook,
+        shopping: widget.shopping)));
+  }
 
   void _navigate(int page) {
+    if ((page == 4 || page == 12) && !_privateUnlocked) return;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
-      // Add Recipe reached from the dashboard defaults to the regular cookbook.
+      // Only protected cookbook and protected shopping list retain the unlock.
+      if (page != 4 && page != 12) {
+        _privateUnlocked = false;
+        _marijuanaFilter.clear();
+      }
       if (page == 3) {
         _newRecipeCollection = RecipeCollection.general;
         _sharedRecipeUrl = '';
@@ -147,6 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _findAlternativesFor(String ingredient) {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
+      _privateUnlocked = false;
       _prefillAlternatives = ingredient;
       _page = 7;
     });
@@ -155,6 +297,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _findStoresFor(String ingredient) {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
+      _privateUnlocked = false;
       _prefillFinder = ingredient;
       _page = 5;
     });
@@ -168,11 +311,11 @@ class _HomeScreenState extends State<HomeScreen> {
       (title: 'My Cookbook', subtitle: 'Read your saved recipes, including offline instructions.', icon: Icons.bookmark_rounded, page: 2),
       (title: 'Shopping List', subtitle: widget.shopping.toBuyCount.toString() + ' groceries still to buy. Add recipe ingredients in one tap.', icon: Icons.shopping_cart_outlined, page: 9),
       (title: 'Add Recipe', subtitle: 'Import a recipe link or write down a family favourite.', icon: Icons.add_circle_outline_rounded, page: 3),
-      (title: 'Marijuana Cookbook', subtitle: 'Keep adult-use recipes in a separate collection.', icon: Icons.local_florist_rounded, page: 4),
       (title: 'Find Ingredient', subtitle: 'Find grocery stores within 30 km and open product searches.', icon: Icons.shopping_basket_rounded, page: 5),
       (title: 'Ingredient Alternatives', subtitle: 'Out of something? See substitute amounts and best uses, even offline.', icon: Icons.swap_horiz_rounded, page: 7),
       (title: 'Cook With What I Have', subtitle: 'Enter ingredients in your kitchen and find matching meal ideas.', icon: Icons.kitchen_outlined, page: 8),
       (title: 'Backup & Restore', subtitle: 'Make a copy of all saved recipes or restore a previous cookbook.', icon: Icons.settings_backup_restore_rounded, page: 6),
+      (title: 'Options', subtitle: 'Settings and private cookbook access.', icon: Icons.settings_outlined, page: 11),
     ];
     return ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 28), children: [
       Container(
@@ -230,7 +373,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'Kitchen Home', 'Find Recipes', 'My Cookbook', 'Add Recipe',
       'Marijuana Cookbook', 'Find Ingredient', 'Backup & Restore',
       'Ingredient Alternatives', 'Cook With What I Have', 'Shopping List',
-      'Babe Quick Recipes',
+      'Babe Quick Recipes', 'Options', 'Private Shopping List',
     ];
     return PopScope(
       canPop: _page == 0,
@@ -244,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
               : IconButton(
                   tooltip: 'Back to Kitchen Home',
                   icon: const Icon(Icons.arrow_back_rounded),
-                  onPressed: () => _navigate(0),
+                  onPressed: () => _navigate(_page == 12 ? 4 : 0),
                 ),
           title: Text(pages[_page], style: const TextStyle(fontWeight: FontWeight.w800)),
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -255,16 +398,18 @@ class _HomeScreenState extends State<HomeScreen> {
           _discover(),
           _cookbook(collection: RecipeCollection.general),
           AddRecipeScreen(
-            key: ValueKey(_newRecipeCollection + ':' + _shareSerial.toString()),
+            key: ValueKey(_newRecipeCollection + ':' + _shareSerial.toString() + ':' + _privateUnlocked.toString()),
+            allowPrivateCollection: _privateUnlocked && _newRecipeCollection == RecipeCollection.marijuana,
             cookbook: widget.cookbook,
             initialUrl: _sharedRecipeUrl,
             initialCollection: _newRecipeCollection,
             onAdded: (collection) {
-              setState(() => _page = collection == RecipeCollection.marijuana ? 4 : 2);
+              setState(() => _page = _privateUnlocked && collection == RecipeCollection.marijuana ? 4 : 2);
               _notice('Recipe added to ${collection == RecipeCollection.marijuana ? 'Marijuana Cookbook' : 'My Cookbook'}');
             },
           ),
-          _cookbook(collection: RecipeCollection.marijuana),
+          _privateUnlocked ? _cookbook(collection: RecipeCollection.marijuana)
+              : const SizedBox.shrink(),
           IngredientFinderScreen(
             key: ValueKey(_prefillFinder),
             initialIngredient: _prefillFinder,
@@ -285,6 +430,15 @@ class _HomeScreenState extends State<HomeScreen> {
           BabeStarterRecipesScreen(
             cookbook: widget.cookbook, shopping: widget.shopping,
           ),
+          _optionsPage(),
+          _privateUnlocked
+              ? ShoppingListScreen(
+                  shopping: widget.shopping,
+                  privateCollectionOnly: true,
+                  onFindNearby: _findStoresFor,
+                  onFindAlternative: _findAlternativesFor,
+                )
+              : const SizedBox.shrink(),
         ])),
       ),
     );
@@ -417,7 +571,7 @@ class _HomeScreenState extends State<HomeScreen> {
           'collections, ingredient lists, cooking steps, and your shopping '
           'list with checked items. Use this before switching to Babe Stable.'),
       const SizedBox(height: 12),
-      Text(widget.cookbook.saved.length.toString() +
+      Text(widget.cookbook.saved.where((recipe) => recipe.collection == RecipeCollection.general).length.toString() +
           ' saved recipes  •  ' +
           widget.shopping.items.length.toString() + ' shopping items',
           style: Theme.of(context).textTheme.titleMedium),
@@ -550,6 +704,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isMarijuana = collection == RecipeCollection.marijuana;
     final filterController = isMarijuana ? _marijuanaFilter : _cookbookFilter;
     final filter = filterController.text.trim().toLowerCase();
+    if (isMarijuana && !_privateUnlocked) return const SizedBox.shrink();
     final savedInSection = widget.cookbook.saved.where((recipe) => recipe.collection == collection).toList();
     final found = savedInSection.where((recipe) =>
       recipe.title.toLowerCase().contains(filter) || recipe.source.toLowerCase().contains(filter)).toList();
@@ -574,6 +729,12 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: () => openExternalUrl('https://www.google.com/search?q=cannabis+edible+recipes', context),
           icon: const Icon(Icons.public),
           label: const Text('Find recipes on the web'),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => _navigate(12),
+          icon: const Icon(Icons.lock_outline),
+          label: const Text('Private Shopping List'),
         ),
         const SizedBox(height: 12),
       ],
@@ -631,11 +792,13 @@ class AddRecipeScreen extends StatefulWidget {
     super.key, required this.cookbook, required this.onAdded,
     this.initialCollection = RecipeCollection.general,
     this.initialUrl = '',
+    this.allowPrivateCollection = false,
   });
   final CookbookStore cookbook;
   final ValueChanged<String> onAdded;
   final String initialCollection;
   final String initialUrl;
+  final bool allowPrivateCollection;
 
   @override
   State<AddRecipeScreen> createState() => _AddRecipeScreenState();
@@ -651,7 +814,8 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   late String _collection;
   @override void initState() {
     super.initState();
-    _collection = widget.initialCollection == RecipeCollection.marijuana
+    _collection = widget.allowPrivateCollection &&
+        widget.initialCollection == RecipeCollection.marijuana
         ? RecipeCollection.marijuana : RecipeCollection.general;
     _url.text = widget.initialUrl;
   }
@@ -720,7 +884,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     const SizedBox(height: 8),
     const Text('Save a link from a cooking website, or write down a family favourite.'),
     const SizedBox(height: 20),
-    ...[
+    if (widget.allowPrivateCollection) ...[
       const Text('Save into', style: TextStyle(fontWeight: FontWeight.w600)),
       const SizedBox(height: 8),
       SegmentedButton<String>(
