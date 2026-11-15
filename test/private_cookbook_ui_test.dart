@@ -27,6 +27,7 @@ void main() {
 
     await tester.pumpWidget(MaterialApp(
       home: HomeScreen(cookbook: cookbook, shopping: shopping,
+        includePrivateCollection: true,
         privatePassword: PrivateCookbookPassword(preferences: prefs)),
     ));
 

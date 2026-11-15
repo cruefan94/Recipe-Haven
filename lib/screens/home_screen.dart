@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../config/app_edition.dart';
 import '../services/kitchen_backup_service.dart';
 import '../models/recipe.dart';
 import '../services/cookbook_store.dart';
@@ -18,10 +19,13 @@ import '../services/private_cookbook_password.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.cookbook, required this.shopping,
-    this.privatePassword});
+    this.privatePassword,
+    this.includePrivateCollection = AppEdition.includesPrivateCollection,
+  });
   final CookbookStore cookbook;
   final ShoppingListStore shopping;
   final PrivateCookbookPassword? privatePassword;
+  final bool includePrivateCollection;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -151,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _openPrivateCookbook() async {
-    if (_unlockBusy) return;
+    if (!widget.includePrivateCollection || _unlockBusy) return;
     setState(() => _unlockBusy = true);
     try {
       final configured = await _privatePassword.isConfigured;
@@ -189,15 +193,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         fontWeight: FontWeight.w800)),
       const SizedBox(height: 16),
       Card(child: ListTile(
-        leading: const Icon(Icons.lock_outline_rounded),
-        title: const Text('Private Cookbook'),
-        subtitle: const Text('Open a collection protected by your personal password.'),
+        leading: const Icon(Icons.settings_backup_restore_rounded),
+        title: const Text('Backup & Restore'),
+        subtitle: const Text('Protect and transfer your recipes and grocery list.'),
         trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: _unlockBusy ? null : _openPrivateCookbook,
+        onTap: () => _navigate(6),
       )),
-      const SizedBox(height: 12),
-      Text('Your password controls access inside this app. '
-        'Saved recipes and exported backup files are not encrypted.',
+      if (widget.includePrivateCollection) ...[
+        const SizedBox(height: 10),
+        Card(child: ListTile(
+          leading: const Icon(Icons.lock_outline_rounded),
+          title: const Text('Private Cookbook'),
+          subtitle: const Text('Open a collection protected by your personal password.'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: _unlockBusy ? null : _openPrivateCookbook,
+        )),
+      ],
+      const SizedBox(height: 18),
+      Text('Recipe Haven keeps your saved recipes and shopping items on '
+        'this device. Exported JSON backup files are not encrypted.',
         style: Theme.of(context).textTheme.bodySmall),
     ],
   );
@@ -250,6 +264,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _toggleSave(Recipe recipe) async {
+    if (!widget.includePrivateCollection &&
+        recipe.collection != RecipeCollection.general) return;
     try {
       if (widget.cookbook.contains(recipe.id)) {
         await widget.cookbook.remove(recipe.id);
@@ -264,14 +280,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _open(Recipe recipe) {
-    if (recipe.collection == RecipeCollection.marijuana && !_privateUnlocked) return;
+    if (recipe.collection == RecipeCollection.marijuana &&
+        (!widget.includePrivateCollection || !_privateUnlocked)) return;
     Navigator.push(context, MaterialPageRoute<void>(builder: (_) =>
       RecipeDetailScreen(recipe: recipe, cookbook: widget.cookbook,
         shopping: widget.shopping)));
   }
 
   void _navigate(int page) {
-    if ((page == 4 || page == 12) && !_privateUnlocked) return;
+    if ((page == 4 || page == 12) &&
+        (!widget.includePrivateCollection || !_privateUnlocked)) return;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       // Only protected cookbook and protected shopping list retain the unlock.
@@ -334,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         icon: Icons.swap_horiz_rounded, page: 7),
       (title: 'Backup & Restore', subtitle: 'Protect recipes and shopping lists',
         icon: Icons.settings_backup_restore_rounded, page: 6),
-      (title: 'Options', subtitle: 'Settings and private cookbook',
+      (title: 'Options', subtitle: 'Settings and saved data',
         icon: Icons.settings_outlined, page: 11),
     ];
     Widget primaryCard(
@@ -436,9 +454,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     const pages = [
       'Kitchen Home', 'Find Recipes', 'My Cookbook', 'Add Recipe',
-      'Marijuana Cookbook', 'Find Ingredient', 'Backup & Restore',
+      widget.includePrivateCollection ? 'Marijuana Cookbook' : '',
+      'Find Ingredient', 'Backup & Restore',
       'Ingredient Alternatives', 'Cook With What I Have', 'Shopping List',
-      'Offline Recipes', 'Options', 'Private Shopping List',
+      'Offline Recipes', 'Options',
+      widget.includePrivateCollection ? 'Private Shopping List' : '',
     ];
     return PopScope(
       canPop: _page == 0,
@@ -502,16 +522,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _cookbook(collection: RecipeCollection.general),
           AddRecipeScreen(
             key: ValueKey(_newRecipeCollection + ':' + _shareSerial.toString() + ':' + _privateUnlocked.toString()),
-            allowPrivateCollection: _privateUnlocked && _newRecipeCollection == RecipeCollection.marijuana,
+            allowPrivateCollection: widget.includePrivateCollection && _privateUnlocked &&
+                _newRecipeCollection == RecipeCollection.marijuana,
             cookbook: widget.cookbook,
             initialUrl: _sharedRecipeUrl,
             initialCollection: _newRecipeCollection,
             onAdded: (collection) {
-              setState(() => _page = _privateUnlocked && collection == RecipeCollection.marijuana ? 4 : 2);
+              setState(() => _page = widget.includePrivateCollection && _privateUnlocked &&
+                  collection == RecipeCollection.marijuana ? 4 : 2);
               _notice('Recipe added to ${collection == RecipeCollection.marijuana ? 'Marijuana Cookbook' : 'My Cookbook'}');
             },
           ),
-          _privateUnlocked ? _cookbook(collection: RecipeCollection.marijuana)
+          widget.includePrivateCollection && _privateUnlocked
+              ? _cookbook(collection: RecipeCollection.marijuana)
               : const SizedBox.shrink(),
           IngredientFinderScreen(
             key: ValueKey(_prefillFinder),
@@ -534,7 +557,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             cookbook: widget.cookbook, shopping: widget.shopping,
           ),
           _optionsPage(),
-          _privateUnlocked
+          widget.includePrivateCollection && _privateUnlocked
               ? ShoppingListScreen(
                   shopping: widget.shopping,
                   privateCollectionOnly: true,
@@ -550,6 +573,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // A full JSON backup includes private collection contents in plain text.
   // Require the private password if such content exists before any export.
   Future<bool> _authorizeFullBackup() async {
+    if (!widget.includePrivateCollection) return true;
     final hasPrivate = widget.cookbook.saved.any(
       (recipe) => recipe.collection == RecipeCollection.marijuana,
     ) || widget.shopping.items.any(
@@ -591,7 +615,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() => _fileTransferBusy = true);
     try {
       final data = KitchenBackupService.exportData(
-        widget.cookbook, widget.shopping);
+        widget.cookbook, widget.shopping,
+        includePrivate: widget.includePrivateCollection);
       await Clipboard.setData(ClipboardData(text: data));
       _notice('Full kitchen backup copied. Save it somewhere private.');
     } on FormatException catch (error) {
@@ -650,7 +675,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return;
       }
       final result = await KitchenBackupService.importData(
-        text, widget.cookbook, widget.shopping);
+        text, widget.cookbook, widget.shopping,
+        includePrivate: widget.includePrivateCollection);
       _notice(_restoreMessage(result));
     } catch (error) {
       _restoreError(error);
@@ -664,7 +690,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() => _fileTransferBusy = true);
     try {
       final saved = await KitchenBackupService.saveFile(
-        widget.cookbook, widget.shopping);
+        widget.cookbook, widget.shopping,
+        includePrivate: widget.includePrivateCollection);
       if (saved) {
         _notice('Full kitchen backup saved. Keep this file private.');
       }
@@ -682,7 +709,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() => _fileTransferBusy = true);
     try {
       final result = await KitchenBackupService.restoreFile(
-        widget.cookbook, widget.shopping);
+        widget.cookbook, widget.shopping,
+        includePrivate: widget.includePrivateCollection);
       if (result != null) _notice(_restoreMessage(result));
     } catch (error) {
       _restoreError(error);
@@ -698,10 +726,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold)),
       const SizedBox(height: 10),
-      const Text('A full JSON backup includes saved recipes, ingredient '
-          'lists, cooking steps and shopping items, including private '
-          'entries. The private password is required when protected '
-          'entries are included. The exported file is not encrypted.'),
+      if (widget.includePrivateCollection)
+        const Text('A full JSON backup includes saved recipes, ingredients, '
+          'cooking steps and shopping items, including your private entries. '
+          'Your password is required when protected entries are included. '
+          'Exported JSON is not encrypted.')
+      else
+        const Text('Back up your saved recipes, ingredients, cooking steps '
+          'and shopping list in one file. Exported JSON is not encrypted.'),
       const SizedBox(height: 12),
       Text(widget.cookbook.saved.where((recipe) => recipe.collection == RecipeCollection.general).length.toString() +
           ' saved recipes  •  ' +

@@ -135,18 +135,34 @@ class KitchenBackupCodec {
 }
 
 class KitchenBackupService {
-  static String exportData(CookbookStore cookbook, ShoppingListStore shopping) {
+  static String exportData(CookbookStore cookbook, ShoppingListStore shopping, {
+    bool includePrivate = false,
+  }) {
     if (cookbook.readFailure || shopping.readFailure) {
       throw StateError('Saved data could not be read; full backup is blocked.');
     }
     return KitchenBackupCodec.encode(
-      recipes: cookbook.saved, shoppingItems: shopping.items,
+      recipes: cookbook.saved.where((recipe) =>
+          includePrivate || recipe.collection == RecipeCollection.general).toList(),
+      shoppingItems: shopping.items.where((item) =>
+          includePrivate || item.collection == RecipeCollection.general).toList(),
     );
   }
 
   static Future<KitchenImportResult> importData(
-    String text, CookbookStore cookbook, ShoppingListStore shopping) async {
+    String text, CookbookStore cookbook, ShoppingListStore shopping, {
+    bool includePrivate = false,
+  }) async {
     final parsed = KitchenBackupCodec.decode(text);
+    if (!includePrivate && (
+        parsed.recipes.any((item) =>
+            item.collection != RecipeCollection.general) ||
+        parsed.shoppingItems.any((item) =>
+            item.collection != RecipeCollection.general))) {
+      throw const FormatException(
+        'This backup contains entries not supported in this app. '
+        'Nothing was imported.');
+    }
     if (cookbook.readFailure ||
         (!parsed.isLegacyCookbook && shopping.readFailure)) {
       throw StateError('Saved data could not be read; import is blocked.');
@@ -179,9 +195,12 @@ class KitchenBackupService {
   }
 
   static Future<bool> saveFile(
-    CookbookStore cookbook, ShoppingListStore shopping) async {
+    CookbookStore cookbook, ShoppingListStore shopping, {
+    bool includePrivate = false,
+  }) async {
     final bytes = Uint8List.fromList(
-      utf8.encode(exportData(cookbook, shopping)),
+      utf8.encode(exportData(cookbook, shopping,
+          includePrivate: includePrivate)),
     );
     final now = DateTime.now();
     final date = [
@@ -202,7 +221,9 @@ class KitchenBackupService {
 
   /// Null if picker canceled; otherwise the number of entries merged.
   static Future<KitchenImportResult?> restoreFile(
-    CookbookStore cookbook, ShoppingListStore shopping) async {
+    CookbookStore cookbook, ShoppingListStore shopping, {
+    bool includePrivate = false,
+  }) async {
     final file = await FilePicker.pickFile(
       dialogTitle: 'Select Recipe Haven kitchen backup',
       type: FileType.custom,
@@ -219,7 +240,7 @@ class KitchenBackupService {
     }
     return importData(
       utf8.decode(bytes, allowMalformed: false),
-      cookbook, shopping,
+      cookbook, shopping, includePrivate: includePrivate,
     );
   }
 }
