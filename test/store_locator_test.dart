@@ -105,4 +105,50 @@ void main() {
     locator.dispose();
   });
 
+  test('Photon backup produces real in-app store rows when Overpass fails',
+      () async {
+    final hosts = <String>[];
+    final locator = StoreLocator(client: MockClient((request) async {
+      hosts.add(request.url.host);
+      if (request.url.host != 'photon.komoot.io') {
+        return http.Response('Server overloaded', 503);
+      }
+      expect(request.url.queryParameters['include'],
+          contains('osm.shop.supermarket'));
+      return http.Response(jsonEncode({
+        'features': [
+          {
+            'properties': {
+              'osm_type': 'N', 'osm_id': 123,
+              'osm_key': 'shop', 'osm_value': 'supermarket',
+              'name': 'Local Grocery', 'street': 'Market Road',
+            },
+            'geometry': {
+              'type': 'Point',
+              'coordinates': [-73.571, 45.501],
+            },
+          },
+          {
+            'properties': {
+              'osm_type': 'N', 'osm_id': 124,
+              'osm_key': 'shop', 'osm_value': 'supermarket',
+              'name': 'Too Far Away',
+            },
+            'geometry': {
+              'type': 'Point',
+              'coordinates': [-73.571, 46.2],
+            },
+          },
+        ],
+      }), 200);
+    }));
+    final result = await locator.nearby(
+        45.5, -73.57, searchRadiusKm: 5);
+    expect(hosts.last, 'photon.komoot.io');
+    expect(result.provider, contains('Photon'));
+    expect(result.stores.map((store) => store.name), ['Local Grocery']);
+    expect(result.stores.single.address, contains('Market Road'));
+    locator.dispose();
+  });
+
 }
