@@ -61,7 +61,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apk="build/app/outputs/flutter-apk/app-babeStable-release.apk"
+          apk="build/app/outputs/flutter-apk/app-babestable-release.apk"
           test -s "$apk"
           signer="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
           test -n "$signer"
@@ -71,7 +71,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-signed
-          cp build/app/outputs/flutter-apk/app-babeStable-release.apk release-signed/Recipe-Haven-Babe-STABLE-SIGNED.apk
+          cp build/app/outputs/flutter-apk/app-babestable-release.apk release-signed/Recipe-Haven-Babe-STABLE-SIGNED.apk
       - name: Publish signed APK artifacts for manual review
         uses: actions/upload-artifact@v4
         with:

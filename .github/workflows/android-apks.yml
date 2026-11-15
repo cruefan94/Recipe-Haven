@@ -43,7 +43,7 @@ jobs:
       - name: Label APKs
         run: |
           mkdir -p release-test
-          cp build/app/outputs/flutter-apk/app-babePreview-debug.apk release-test/Babe-Android-PREVIEW-KEEP-OLD-APP.apk
+          cp build/app/outputs/flutter-apk/app-babepreview-debug.apk release-test/Babe-Android-PREVIEW-KEEP-OLD-APP.apk
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
