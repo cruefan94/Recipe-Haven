@@ -53,8 +53,14 @@ class NearbyStoreResults {
 }
 
 class StoreLocator {
-  StoreLocator({http.Client? client}) : _client = client ?? http.Client();
+  StoreLocator({http.Client? client, List<Uri>? overpassEndpoints})
+      : _client = client ?? http.Client(),
+        _overpassEndpoints = overpassEndpoints ?? [
+          Uri.parse('https://overpass.private.coffee/api/interpreter'),
+          Uri.parse('https://overpass-api.de/api/interpreter'),
+        ];
   final http.Client _client;
+  final List<Uri> _overpassEndpoints;
   static const double radiusKm = 30;
   static const String _workerUrl = String.fromEnvironment('STORE_LOOKUP_URL');
 
@@ -144,50 +150,74 @@ class StoreLocator {
     return output;
   }
 
+  /// Do not silently equate an HTTP error with a lack of grocery stores.
   Future<NearbyStoreResults> _openStreetMap(double lat, double lon) async {
-    // The public Overpass service may be slow or unavailable; this is a fallback,
-    // not a guarantee of full or real-time store coverage.
     final around = '30000,${lat.toStringAsFixed(6)},${lon.toStringAsFixed(6)}';
-    const shopTypes = 'supermarket|grocery|convenience|greengrocer|butcher|bakery|deli|general|organic|spices|health_food|farm';
-    final query = '''[out:json][timeout:22];
-(
-node["shop"~"^($shopTypes)\$"] (around:$around);
-way["shop"~"^($shopTypes)\$"] (around:$around);
-);
-out center 550;''';
-    final response = await _client.post(
-      Uri.parse('https://overpass.kumi.systems/api/interpreter'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'},
-      body: {'data': query},
-    ).timeout(const Duration(seconds: 28));
-    if (response.statusCode != 200) throw StateError('Nearby stores could not be loaded');
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final stores = <NearbyStore>[];
-    for (final raw in (data['elements'] as List<dynamic>? ?? [])) {
-      if (raw is! Map) continue;
-      final item = Map<String, dynamic>.from(raw);
-      final tags = (item['tags'] as Map?)?.cast<String, dynamic>() ?? {};
-      final name = (tags['name'] as String? ?? '').trim();
-      if (name.isEmpty) continue;
-      final center = (item['center'] as Map?)?.cast<String, dynamic>() ?? item;
-      final pointLat = (center['lat'] as num?)?.toDouble();
-      final pointLon = (center['lon'] as num?)?.toDouble();
-      if (pointLat == null || pointLon == null) continue;
-      final distance = distanceKm(lat, lon, pointLat, pointLon);
-      if (distance > radiusKm) continue;
-      final streetAddress = [
-        tags['addr:housenumber'], tags['addr:street'], tags['addr:city'],
-      ].whereType<String>().where((s) => s.isNotEmpty).join(' ');
-      stores.add(NearbyStore(
-        id: 'osm:${item['type']}:${item['id']}', name: name,
-        latitude: pointLat, longitude: pointLon, distanceKm: distance,
-        address: streetAddress,
-        website: safeWebsite((tags['website'] ?? tags['contact:website']) as String?),
-        category: (tags['shop'] as String? ?? 'Food store').replaceAll('_', ' '),
-      ));
+    const shopTypes =
+        'supermarket|grocery|convenience|greengrocer|general|organic|deli|farm';
+    final query = '[out:json][timeout:18];'
+        '(nwr["shop"~"^($shopTypes)\\$"](around:$around););'
+        'out center 600;';
+    Object? lastFailure;
+    NearbyStoreResults? emptyResult;
+    for (final endpoint in _overpassEndpoints) {
+      try {
+        final response = await _client.post(
+          endpoint,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+            'Accept': 'application/json',
+            'User-Agent': 'RecipeHaven/0.2 (https://github.com/cruefan94/Recipe-Haven)',
+          },
+          body: {'data': query},
+        ).timeout(const Duration(seconds: 21));
+        if (response.statusCode != 200) {
+          throw StateError('Store directory HTTP ${response.statusCode}');
+        }
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+        if (decoded is! Map || decoded['elements'] is! List) {
+          throw const FormatException('Invalid store directory response.');
+        }
+        final stores = <NearbyStore>[];
+        final seen = <String>{};
+        for (final raw in (decoded['elements'] as List)) {
+          if (raw is! Map) continue;
+          final item = Map<String, dynamic>.from(raw);
+          final tags = (item['tags'] as Map?)?.cast<String, dynamic>() ?? {};
+          final name = (tags['name'] as String? ?? '').trim();
+          if (name.isEmpty) continue;
+          final center = (item['center'] as Map?)?.cast<String, dynamic>() ?? item;
+          final pointLat = (center['lat'] as num?)?.toDouble();
+          final pointLon = (center['lon'] as num?)?.toDouble();
+          if (pointLat == null || pointLon == null || !pointLat.isFinite ||
+              !pointLon.isFinite) continue;
+          final distance = distanceKm(lat, lon, pointLat, pointLon);
+          if (distance > radiusKm) continue;
+          final id = 'osm:${item['type']}:${item['id']}';
+          if (!seen.add(id)) continue;
+          final streetAddress = [
+            tags['addr:housenumber'], tags['addr:street'], tags['addr:city'],
+          ].whereType<String>().where((v) => v.isNotEmpty).join(' ');
+          stores.add(NearbyStore(
+            id: id, name: name, latitude: pointLat, longitude: pointLon,
+            distanceKm: distance, address: streetAddress,
+            website: safeWebsite((tags['website'] ?? tags['contact:website'])?.toString()),
+            category: (tags['shop'] as String? ?? 'Food store').replaceAll('_', ' '),
+          ));
+        }
+        stores.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+        final result = NearbyStoreResults(
+          stores: stores, provider: 'OpenStreetMap (${endpoint.host})');
+        if (stores.isNotEmpty) return result;
+        emptyResult ??= result;
+      } catch (error) {
+        lastFailure = error;
+      }
     }
-    stores.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-    return NearbyStoreResults(stores: stores, provider: 'OpenStreetMap');
+    if (emptyResult != null) return emptyResult;
+    throw StateError('Store directory temporarily unavailable. '
+        'Nearby grocery stores may still exist. Use the direct Maps search. '
+        '${lastFailure is FormatException ? 'Directory response invalid.' : ''}');
   }
 
   void dispose() => _client.close();
