@@ -102,10 +102,12 @@ class _IngredientFinderScreenState extends State<IngredientFinderScreen> {
           'The store directory or GPS is unavailable. Try again or open Google Maps.';
       setState(() => _error = message);
     } finally {
-      if (mounted) setState(() {
-        _busy = false;
-        _searchStage = null;
-      });
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _searchStage = null;
+        });
+      }
     }
   }
 
