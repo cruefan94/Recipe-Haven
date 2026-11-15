@@ -198,7 +198,7 @@ class RecipeSearchService {
     // "Chicken Parmesan" is a better result for "Parmesan chicken"
     // than e.g. "Dinner with Parmesan Chicken, Rice and Soup".
     return 65 + (terms.length * 3) -
-        (titleWords.length - terms.length).clamp(0, 20);
+        (titleWords.length - terms.length).clamp(0, 20).toInt();
   }
 
   List<String> _mealSearchVariants(String query) {
