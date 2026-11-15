@@ -1,12 +1,12 @@
 import '../models/recipe.dart';
 
-/// Original, self-contained kitchen starter recipes bundled with Babe.
+/// Original offline starter recipes included in Recipe Haven.
 /// Accessible without internet and never presented as third-party content.
 const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:chicken-parmesan",
     title: "Chicken Parmesan",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "Italian-inspired",
     category: "Dinner",
     timeMinutes: 40,
@@ -31,7 +31,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:chicken-alfredo",
     title: "Chicken Alfredo Pasta",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "Italian-inspired",
     category: "Dinner",
     timeMinutes: 35,
@@ -56,7 +56,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:garlic-parmesan-pasta",
     title: "Garlic Parmesan Pasta",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "Italian-inspired",
     category: "Dinner",
     timeMinutes: 20,
@@ -79,7 +79,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:beef-tacos",
     title: "Weeknight Beef Tacos",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "Mexican-inspired",
     category: "Dinner",
     timeMinutes: 25,
@@ -104,7 +104,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:vegetarian-chili",
     title: "Easy Vegetarian Bean Chili",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "American",
     category: "Dinner",
     timeMinutes: 35,
@@ -129,7 +129,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:chicken-stir-fry",
     title: "Chicken and Vegetable Stir-Fry",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "Asian-inspired",
     category: "Dinner",
     timeMinutes: 30,
@@ -154,7 +154,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:fried-rice",
     title: "Easy Egg Fried Rice",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "Asian-inspired",
     category: "Lunch",
     timeMinutes: 20,
@@ -176,7 +176,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:banana-bread",
     title: "Classic Banana Bread",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "American",
     category: "Baking",
     timeMinutes: 65,
@@ -201,7 +201,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:buttermilk-pancakes",
     title: "Fluffy Buttermilk Pancakes",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "American",
     category: "Breakfast",
     timeMinutes: 25,
@@ -225,7 +225,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:tomato-soup",
     title: "Simple Tomato Soup",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "American",
     category: "Lunch",
     timeMinutes: 30,
@@ -248,7 +248,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:mac-and-cheese",
     title: "Stovetop Macaroni and Cheese",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "American",
     category: "Dinner",
     timeMinutes: 25,
@@ -272,7 +272,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:broccoli-parmesan",
     title: "Parmesan Roasted Broccoli",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "Italian-inspired",
     category: "Side",
     timeMinutes: 25,
@@ -295,7 +295,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:baked-salmon",
     title: "Lemon Garlic Baked Salmon",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "North American",
     category: "Dinner",
     timeMinutes: 25,
@@ -317,7 +317,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:greek-salad",
     title: "Greek-Style Salad",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "Mediterranean",
     category: "Salad",
     timeMinutes: 15,
@@ -342,7 +342,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:chocolate-chip-cookies",
     title: "Classic Chocolate Chip Cookies",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "American",
     category: "Baking",
     timeMinutes: 30,
@@ -368,7 +368,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:overnight-oats",
     title: "Overnight Oats",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "American",
     category: "Breakfast",
     timeMinutes: 10,
@@ -388,7 +388,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:garlic-bread",
     title: "Simple Garlic Bread",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "Italian-inspired",
     category: "Side",
     timeMinutes: 15,
@@ -409,7 +409,7 @@ const List<Recipe> babeStarterRecipes = [
   Recipe(
     id: "babe:starter:chickpea-curry",
     title: "Quick Chickpea Curry",
-    source: 'Babe Kitchen Originals',
+    source: 'Recipe Haven Originals',
     cuisine: "Indian-inspired",
     category: "Dinner",
     timeMinutes: 30,

@@ -11,7 +11,7 @@ void main() {
     for (final recipe in babeStarterRecipes) {
       expect(recipe.ingredients, isNotEmpty);
       expect(recipe.steps, isNotEmpty);
-      expect(recipe.source, 'Babe Kitchen Originals');
+      expect(recipe.source, 'Recipe Haven Originals');
     }
   });
 

@@ -243,7 +243,7 @@ class _PantryCookingScreenState extends State<PantryCookingScreen> {
         ],
         if (_terms.isNotEmpty) ...[
           const SizedBox(height: 20),
-          Text('Cookbook + Babe originals (available offline)',
+          Text('Cookbook + built-in recipes (available offline)',
               style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),

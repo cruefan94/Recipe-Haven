@@ -29,9 +29,9 @@ class EditionConfig {
   bool get supportsIos => !isBabe;
   bool get hasMarijuanaCookbook => true;
   bool get hasIngredientFinder => true;
-  String get welcomeTitle => isBabe ? 'made just for you babe 💛' : 'for mom and dad';
-  String get appTitle => isBabe ? 'Recipe Haven 💛' : 'Recipe Haven — For Mom and Dad';
+  String get welcomeTitle => isBabe ? 'Recipe Haven' : 'for mom and dad';
+  String get appTitle => isBabe ? 'Recipe Haven' : 'Recipe Haven — For Mom and Dad';
   String get welcomeSubtitle => isBabe
-      ? 'A little place for everything delicious.'
+      ? 'Your recipes, grocery list, and kitchen tools in one place.'
       : 'All your favourite recipes, together in one place.';
 }

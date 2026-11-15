@@ -1,9 +1,9 @@
-name: Build Android — Babe Only (Test)
+name: Recipe Haven Android — Development Checks
 
 on:
   workflow_dispatch:
   push:
-    branches: [main, feature/ingredient-products-and-cookbook-backup]
+    branches: [feature/ingredient-products-and-cookbook-backup]
 
 permissions:
   contents: read
@@ -13,40 +13,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@v4
-      - name: Java 17
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Flutter stable
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-      - name: Get dependencies
+      - name: Install dependencies
         run: flutter pub get
-      - name: Generate Android project and independent editions
+      - name: Generate Android project
         run: bash scripts/bootstrap_android.sh
-      - name: Static analysis
+      - name: Flutter static analysis
         run: flutter analyze
-      - name: Test
+      - name: Flutter tests
         run: flutter test
-      - name: Build Babe Android side-by-side preview APK
+      - name: Compile Android Stable app for CI only
         shell: bash
         run: |
           set -euo pipefail
-          code=$((20000 + GITHUB_RUN_NUMBER))
-          # Different package ID: can install without removing existing Babe.
-          flutter build apk --debug --flavor babePreview --dart-define=EDITION=babe --build-number="$code"
-      - name: Label APKs
-        run: |
-          mkdir -p release-test
-          cp build/app/outputs/flutter-apk/app-babepreview-debug.apk release-test/Babe-Android-PREVIEW-KEEP-OLD-APP.apk
-      - name: Upload APKs
-        uses: actions/upload-artifact@v4
-        with:
-          name: RecipeHaven-Babe-Parallel-PREVIEW-APK
-          path: release-test/*.apk
-          retention-days: 30
+          # Never distribute a debug-signed build with the Stable app ID.
+          flutter build apk --debug --flavor babeStable --dart-define=EDITION=babe
+          test -s build/app/outputs/flutter-apk/app-babestable-debug.apk
+          echo "Android source compiles. Debug artifact intentionally NOT published."

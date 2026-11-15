@@ -190,8 +190,8 @@ class KitchenBackupService {
       now.day.toString().padLeft(2, '0'),
     ].join('-');
     final path = await FilePicker.saveFile(
-      dialogTitle: 'Save Babe full kitchen backup',
-      fileName: 'Babe-Kitchen-Backup-' + date + '.json',
+      dialogTitle: 'Save Recipe Haven kitchen backup',
+      fileName: 'Recipe-Haven-Kitchen-Backup-' + date + '.json',
       type: FileType.custom,
       allowedExtensions: const ['json'],
       mimeType: 'application/json',
@@ -204,7 +204,7 @@ class KitchenBackupService {
   static Future<KitchenImportResult?> restoreFile(
     CookbookStore cookbook, ShoppingListStore shopping) async {
     final file = await FilePicker.pickFile(
-      dialogTitle: 'Select Babe kitchen backup',
+      dialogTitle: 'Select Recipe Haven kitchen backup',
       type: FileType.custom,
       allowedExtensions: const ['json'],
     );

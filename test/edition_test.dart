@@ -3,12 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:recipe_haven/config/edition.dart';
 
 void main() {
-  test('Babe is Android-only and has the requested title', () {
+  test('Android legacy build selector presents unified Recipe Haven', () {
     final babe = EditionConfig.resolve(
       editionName: 'babe', platform: TargetPlatform.android,
     );
     expect(babe.isBabe, isTrue);
-    expect(babe.welcomeTitle, 'made just for you babe 💛');
+    expect(babe.welcomeTitle, 'Recipe Haven');
+    expect(babe.appTitle, 'Recipe Haven');
     expect(babe.supportsIos, isFalse);
     expect(babe.hasMarijuanaCookbook, isTrue);
     expect(babe.hasIngredientFinder, isTrue);

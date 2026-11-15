@@ -41,53 +41,9 @@ class RecipeHavenApp extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
-      home: RecipeHavenWelcomeScreen(cookbook: cookbook, shopping: shopping, edition: edition),
+      // Open directly to the kitchen; no edition-selection or welcome gate.
+      home: HomeScreen(cookbook: cookbook, shopping: shopping),
     );
   }
 }
 
-/// Both versions have their own title screen but share every cooking feature.
-class RecipeHavenWelcomeScreen extends StatelessWidget {
-  const RecipeHavenWelcomeScreen({
-    super.key, required this.cookbook, required this.shopping, required this.edition,
-  });
-  final CookbookStore cookbook;
-  final ShoppingListStore shopping;
-  final EditionConfig edition;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.menu_book_rounded, size: 90, color: Color(0xFFFFA638)),
-              const SizedBox(height: 28),
-              Text(edition.welcomeTitle,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.w800, height: 1.2)),
-              const SizedBox(height: 18),
-              Text(edition.welcomeSubtitle,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 40),
-              FilledButton.icon(
-                onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute<void>(
-                  builder: (_) => HomeScreen(cookbook: cookbook, shopping: shopping),
-                )),
-                icon: Icon(edition.isBabe ? Icons.favorite_outline : Icons.restaurant_menu),
-                label: const Text('Start cooking'),
-                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

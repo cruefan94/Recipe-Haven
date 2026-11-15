@@ -311,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final theme = Theme.of(context);
     final entries = <({String title, String subtitle, IconData icon, int page})>[
       (title: 'Find Recipes', subtitle: 'Search and compare versions of your favourite dishes.', icon: Icons.search_rounded, page: 1),
-      (title: 'Babe Quick Recipes', subtitle: '18 original step-by-step recipes you can use without internet.', icon: Icons.menu_book_outlined, page: 10),
+      (title: 'Offline Recipes', subtitle: '18 complete recipes available without internet.', icon: Icons.menu_book_outlined, page: 10),
       (title: 'My Cookbook', subtitle: 'Read your saved recipes, including offline instructions.', icon: Icons.bookmark_rounded, page: 2),
       (title: 'Shopping List', subtitle: widget.shopping.toBuyCount.toString() + ' groceries still to buy. Add recipe ingredients in one tap.', icon: Icons.shopping_cart_outlined, page: 9),
       (title: 'Add Recipe', subtitle: 'Import a recipe link or write down a family favourite.', icon: Icons.add_circle_outline_rounded, page: 3),
@@ -377,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       'Kitchen Home', 'Find Recipes', 'My Cookbook', 'Add Recipe',
       'Marijuana Cookbook', 'Find Ingredient', 'Backup & Restore',
       'Ingredient Alternatives', 'Cook With What I Have', 'Shopping List',
-      'Babe Quick Recipes', 'Options', 'Private Shopping List',
+      'Offline Recipes', 'Options', 'Private Shopping List',
     ];
     return PopScope(
       canPop: _page == 0,
@@ -510,7 +510,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (dialog) => AlertDialog(
         title: const Text('Restore your kitchen backup?'),
         content: const Text('This imports recipes and shopping items from a '
-          'Babe backup file. Existing entries will stay unchanged. '
+          'Recipe Haven backup file. Existing entries will stay unchanged. '
           'Older recipe-only backups are also accepted. '
           'Choose only files from a source you trust.'),
         actions: [
@@ -547,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final text = (await Clipboard.getData('text/plain'))?.text;
       if (text == null || text.trim().isEmpty) {
-        _notice('Clipboard is empty. Copy a Babe backup first.');
+        _notice('Clipboard is empty. Copy a Recipe Haven backup first.');
         return;
       }
       final result = await KitchenBackupService.importData(
@@ -639,7 +639,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       const Text('Existing saved recipes and grocery items will not be '
           'overwritten. Older Recipe Haven cookbook-only JSON files can '
           'still be imported, but contain no grocery list. To move data to '
-          'a different Babe app installation, first export a JSON file in '
+          'a different Recipe Haven installation, export a JSON file in '
           'the old app, then import it in the new one. Both apps have their '
           'own private storage. The backup does not enable cloud sync.'),
       const SizedBox(height: 12),
@@ -696,7 +696,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       OutlinedButton.icon(
         onPressed: () => _navigate(10),
         icon: const Icon(Icons.menu_book_outlined),
-        label: const Text('Browse all 18 offline Babe recipes'),
+        label: const Text('Browse all 18 offline recipes'),
       ),
       const SizedBox(height: 8),
       OutlinedButton.icon(

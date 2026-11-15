@@ -78,11 +78,11 @@ class _BabeStarterRecipesScreenState extends State<BabeStarterRecipesScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
       children: [
-        Text('Babe Quick Recipes',
+        Text('Offline Recipes',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
-        const Text('18 original, complete recipes included in Babe. '
+        const Text('18 complete recipes included with Recipe Haven. '
           'Open and save them even when your phone is offline.'),
         const SizedBox(height: 14),
         TextField(
