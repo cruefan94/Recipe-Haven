@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm_key_backup:
-        description: "I backed up my private Babe signing key and approve this release build"
+        description: "I securely backed up my Recipe Haven signing key and approve this release build"
         required: true
         default: false
         type: boolean
