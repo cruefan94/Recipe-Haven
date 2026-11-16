@@ -617,7 +617,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 )
               : const SizedBox.shrink(),
           const KitchenConverterScreen(),
-          const KitchenTimerScreen(),
+          _page == 14
+              ? const KitchenTimerScreen()
+              : const SizedBox.shrink(),
           _kitchenToolsPage(),
         ])),
       ),
