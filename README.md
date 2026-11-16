@@ -25,6 +25,8 @@ Both reuse the owner's existing permanent Android signing keystore through prote
 - Add Recipe: manual input and supported HTTPS recipe link import.
 - Cook With What I Have: discover options using pantry ingredients.
 - Shopping List: add groceries manually or from recipes; check items off offline.
+- Kitchen Tools: a dedicated tab plus an always-visible top-bar oven timer shortcut; convert US/metric cups, tablespoons, teaspoons, mL/L, weights and oven °F/°C (without pretending dry volume equals weight).
+- Oven & Kitchen Timer: manually match the oven duration; users choose optional finish alert, sound, vibration, progress notifications, overdue repeats, pause/resume and stop. Timer state is saved locally, and reminders use Android scheduled notifications so alerts can appear with the screen locked. Notification/exact-alarm permissions and battery settings can delay or block alerts; there is no smart-oven connectivity.
 - Find Ingredient: selectable 2, 5, 10, 20, 30 or 50 km distance, in-app public-store directory, fallback Google Maps and retailer searches; **no verified live product prices or inventory**.
 - Ingredient Alternatives: context-specific offline substitution reference.
 - Backup & Restore: validated full-kitchen JSON file/clipboard transfer; legacy cookbook-only JSON supported.
@@ -61,9 +63,10 @@ The repository retains an iOS preparation scaffold for future use. On macOS/Xcod
 ## Next development priorities
 
 1. Test the new Professional APK on a phone, including confirming the excluded feature is absent.
-2. Fix any in-app grocery-store list gaps, keyboard flicker, layout clipping and search issues observed on Android.
-3. Continue polish for professional everyday use and confirm reliable backups.
-4. Preserve permanent-signing continuity for subsequent releases.
-5. Phone-test the separately signed Full edition, including password creation, unlocking, relocking, and independent cookbook storage; then pursue iPhone support.
+2. Test the new Kitchen Tools converter and timer on real Android phones, including notification permissions, locked-screen alerts, overdue reminders, pause/resume, and alerts after reopening.
+3. Fix any in-app grocery-store list gaps, keyboard flicker, layout clipping and search issues observed on Android.
+4. Continue polish for professional everyday use and confirm reliable backups.
+5. Preserve permanent-signing continuity for subsequent releases.
+6. Phone-test the separately signed Full edition, including password creation, unlocking, relocking, and independent cookbook storage; then pursue iPhone support.
 
 The Recipe Haven project is independent from the user's Flipper and other unrelated repositories.

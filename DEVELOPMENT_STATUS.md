@@ -28,6 +28,7 @@ An iPhone version remains on the roadmap **after Android validation**.
 - My Cookbook; manual recipe creation, URL import, and Android sharing.
 - Pantry/ingredient cooking suggestions; ingredient substitutions.
 - Grocery shopping list.
+- All-in-one Kitchen Tools tab: cooking converter for US/metric volume, masses, oven temperatures, and a manual oven timer offering user-selected phone alarms, periodic progress reminders and overdue repeat notices. Timer state is stored across app restarts. Android may defer/mute alerts depending on notification permissions, exact alarm settings, and battery restrictions; direct oven control is not included.
 - Find Ingredient: selectable **2, 5, 10, 20, 30, 50 km** radius;
   store directory results shown **inside the app** when available;
   fallback retailer searches and Maps links.
@@ -73,6 +74,7 @@ guarantee live store listings.
 
 ## Next implementation priorities
 
+- Verify the Kitchen Tools tab, conversion accuracy and Android timer notifications on physical devices (screen locked/background, permission denied, exact alarm denied, pause/resume and stop).
 - Follow up on actual phone test observations, especially store availability
   and grocery-list UX.
 - Preserve permanent Android signing key; do not regenerate or expose secrets.

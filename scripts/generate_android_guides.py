@@ -114,11 +114,15 @@ def generate(output_dir: Path, edition: str):
         'Find Recipes: type a dish or ingredient, search, then open a recipe. If you have no internet, browse Offline Recipes (18 built-in recipes).',
         'My Cookbook: open or search your saved recipes. Choose Add Recipe to write your own, paste a recipe link, or use Android Share from a recipe website.',
         'Shopping List: add groceries manually or from recipes; tap an item to check it off while shopping.',
+        'Kitchen Tools > Kitchen Converter: choose volume, weight or oven temperature. For example, 1 US cup is 16 US tablespoons. Metric cups are separate.',
+        'Kitchen Tools > Oven & Kitchen Timer: enter the same cooking time as your oven. Set your preferred finish alert, sound, vibration and optional reminders every 5, 10, 15, 30 or custom minutes.',
+        'Start timer; allow notifications and (if requested) Android exact-alarm permission. You can leave the app or lock the phone. Pause, resume or dismiss/stop to cancel outstanding reminders.',
         'Cook With What I Have: enter ingredients you already own to see recipe ideas. Ingredient Alternatives suggests substitutes.',
         'Find Ingredient: type an ingredient, select 2, 5, 10, 20, 30, or 50 km, then tap Find stores. Allow location access when asked. The store list depends on public directory coverage and may be incomplete.',
         'If store results time out, try 5 or 10 km, use See grocery stores on Google Maps, or tap Look for this ingredient at retailers. Store listings do not guarantee that the ingredient is in stock.',
         'Options > Backup & Restore: save your recipes and shopping list as a JSON backup or restore a previously saved one. Store backup files somewhere safe.',
     ])
+    note(doc, 'Oven timer:', 'Recipe Haven does not control the oven. Phone sound, battery and notification settings may delay or mute alerts. Test alerts before relying on them, and keep normal oven/fire safety measures.')
     if is_full:
         heading(doc, '4  Full edition: Marijuana Cookbook')
         steps(doc, [
