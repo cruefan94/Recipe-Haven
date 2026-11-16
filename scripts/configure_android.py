@@ -70,6 +70,24 @@ android {
     }
 }
 '''
+# Scheduled notifications need Android API desugaring.
+if 'RECIPE_HAVEN_TIMER_NOTIFICATION_DESUGARING' not in s:
+    s += '''
+// RECIPE_HAVEN_TIMER_NOTIFICATION_DESUGARING
+android {
+    defaultConfig {
+        multiDexEnabled = true
+    }
+    compileOptions {
+        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+}
+'''
 gradle.write_text(s)
 
 # The observed JavaDoc parser crash is in :url_launcher_android, a library
@@ -103,6 +121,9 @@ for permission in [
     'android.permission.INTERNET',
     'android.permission.ACCESS_COARSE_LOCATION',
     'android.permission.ACCESS_FINE_LOCATION',
+    'android.permission.POST_NOTIFICATIONS',
+    'android.permission.RECEIVE_BOOT_COMPLETED',
+    'android.permission.SCHEDULE_EXACT_ALARM',
 ]:
     if permission not in m:
         m = m.replace('<application', f'<uses-permission android:name="{permission}" />\n    <application', 1)
@@ -119,7 +140,31 @@ if 'android.intent.action.SEND' not in m:
         '''
     m = m.replace('</activity>', share_filter + '</activity>', 1)
 
+# Register the Android alarm receivers required when the app is closed.
+if 'ScheduledNotificationReceiver' not in m:
+    receiver = '''        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+    '''
+    m = m.replace('</application>', receiver + '</application>', 1)
 manifest.write_text(m)
+
+# Keep launcher notification icon in signed release resources.
+timer_icon_keep = root / 'android/app/src/main/res/raw/keep.xml'
+timer_icon_keep.parent.mkdir(parents=True, exist_ok=True)
+timer_icon_keep.write_text(
+    '<resources xmlns:tools="http://schemas.android.com/tools" '
+    'tools:keep="@mipmap/ic_launcher" />\n'
+)
 
 # Flutter generates a default MainActivity during bootstrap. Replace only
 # that generated Android entry point with our dedicated share receiver.
