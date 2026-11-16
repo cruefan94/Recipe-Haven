@@ -14,6 +14,8 @@ import 'ingredient_alternatives_screen.dart';
 import 'pantry_cooking_screen.dart';
 import 'offline_recipes_screen.dart';
 import 'shopping_list_screen.dart';
+import 'kitchen_converter_screen.dart';
+import 'kitchen_timer_screen.dart';
 import '../services/incoming_recipe_share.dart';
 import '../services/private_cookbook_password.dart';
 
@@ -346,6 +348,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         icon: Icons.bookmark_rounded, page: 2),
       (title: 'Shopping List', subtitle: '${widget.shopping.toBuyCount} groceries to buy',
         icon: Icons.shopping_cart_outlined, page: 9),
+      (title: 'Kitchen Tools', subtitle: 'Converter and oven timer',
+        icon: Icons.timer_outlined, page: 15),
     ];
     final tools = <({String title, String subtitle, IconData icon, int page})>[
       (title: 'Offline Recipes', subtitle: '18 complete recipes without internet',
@@ -356,6 +360,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         icon: Icons.shopping_basket_outlined, page: 5),
       (title: 'Ingredient Alternatives', subtitle: 'Swap an ingredient you are missing',
         icon: Icons.swap_horiz_rounded, page: 7),
+      (title: 'Kitchen Converter', subtitle: 'Cups, tablespoons, weights and oven °C/°F',
+        icon: Icons.calculate_outlined, page: 13),
+      (title: 'Oven & Kitchen Timer', subtitle: 'Phone alerts and reminders',
+        icon: Icons.alarm_rounded, page: 14),
       (title: 'Backup & Restore', subtitle: 'Protect recipes and shopping lists',
         icon: Icons.settings_backup_restore_rounded, page: 6),
       (title: 'Options', subtitle: 'Settings and saved data',
@@ -456,6 +464,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
+  Widget _kitchenToolsPage() => ListView(
+    padding: const EdgeInsets.all(16),
+    children: [
+      Text('Kitchen Tools', style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 8),
+      const Text('Everyday cooking help, in one place.'),
+      Card(child: ListTile(
+        leading: const Icon(Icons.alarm_rounded),
+        title: const Text('Oven & Kitchen Timer'),
+        subtitle: const Text('Timer, optional alerts and reminders'),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () => _navigate(14),
+      )),
+      Card(child: ListTile(
+        leading: const Icon(Icons.calculate_outlined),
+        title: const Text('Kitchen Converter'),
+        subtitle: const Text('Cups, tablespoons, weights and oven °F/°C'),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () => _navigate(13),
+      )),
+      const SizedBox(height: 16),
+      const Text('Recipe Haven is growing into an all-in-one kitchen assistant.'),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final pages = [
@@ -465,6 +498,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       'Ingredient Alternatives', 'Cook With What I Have', 'Shopping List',
       'Offline Recipes', 'Options',
       widget.includePrivateCollection ? 'Private Shopping List' : '',
+      'Kitchen Converter', 'Oven & Kitchen Timer', 'Kitchen Tools',
     ];
     return PopScope(
       canPop: _page == 0,
@@ -483,6 +517,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           title: Text(_page == 0 ? 'Recipe Haven' : pages[_page],
             style: const TextStyle(fontWeight: FontWeight.w800)),
           actions: [
+            if (_page != 14)
+              IconButton(
+                tooltip: 'Oven timer',
+                onPressed: () => _navigate(14),
+                icon: const Icon(Icons.timer_outlined),
+              ),
             if (_page != 11)
               IconButton(
                 tooltip: 'Options',
@@ -493,11 +533,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           centerTitle: false,
         ),
-        bottomNavigationBar: const [0, 1, 2, 9].contains(_page)
+        bottomNavigationBar: const [0, 1, 2, 9, 15].contains(_page)
             ? NavigationBar(
-                selectedIndex: const [0, 1, 2, 9].indexOf(_page),
+                selectedIndex: const [0, 1, 2, 9, 15].indexOf(_page),
                 onDestinationSelected: (index) =>
-                    _navigate(const [0, 1, 2, 9][index]),
+                    _navigate(const [0, 1, 2, 9, 15][index]),
                 destinations: const [
                   NavigationDestination(
                     icon: Icon(Icons.home_outlined),
@@ -518,6 +558,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     icon: Icon(Icons.shopping_cart_outlined),
                     selectedIcon: Icon(Icons.shopping_cart_rounded),
                     label: 'Shopping',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.handyman_outlined),
+                    selectedIcon: Icon(Icons.handyman_rounded),
+                    label: 'Tools',
                   ),
                 ],
               )
@@ -571,6 +616,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onFindAlternative: _findAlternativesFor,
                 )
               : const SizedBox.shrink(),
+          const KitchenConverterScreen(),
+          const KitchenTimerScreen(),
+          _kitchenToolsPage(),
         ])),
       ),
     );
