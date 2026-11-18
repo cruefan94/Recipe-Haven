@@ -1,0 +1,16 @@
+name: android_app_foundation
+description: Shared Android-first Flutter UI and local record storage derived from Recipe Haven patterns.
+publish_to: none
+version: 0.1.0
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  sqflite: ^2.4.6
+  path: ^1.9.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true
