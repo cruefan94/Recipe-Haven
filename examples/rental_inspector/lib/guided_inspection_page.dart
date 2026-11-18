@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'inspection_checklist.dart';
 
 class GuidedInspectionPage extends StatefulWidget {
-  const GuidedInspectionPage({super.key, required this.store});
+  const GuidedInspectionPage({super.key, required this.store, this.existing});
   final OfflineRecordStore store;
+  final WorkRecord? existing;
   @override State<GuidedInspectionPage> createState() => _GuidedInspectionPageState();
 }
 
@@ -15,6 +16,26 @@ class _GuidedInspectionPageState extends State<GuidedInspectionPage> {
   Map<String, String> responses = RoomChecklist.empty();
   bool saving = false;
   static const inspectionTypes = ['Move-in', 'Move-out', 'Routine', 'Maintenance'];
+
+  @override void initState() {
+    super.initState();
+    final previous = widget.existing?.data;
+    if (previous == null) return;
+    property.text = previous['property']?.toString() ?? '';
+    room.text = previous['room']?.toString() ?? '';
+    notes.text = previous['notes']?.toString() ?? '';
+    final type = previous['inspectionType'];
+    if (type is String && inspectionTypes.contains(type)) inspectionType = type;
+    final saved = previous['ratings'];
+    if (saved is Map) {
+      for (final area in RoomChecklist.areas) {
+        final rating = saved[area];
+        if (rating is String && RoomChecklist.ratings.contains(rating)) {
+          responses[area] = rating;
+        }
+      }
+    }
+  }
 
   @override void dispose() {
     property.dispose(); room.dispose(); notes.dispose();
@@ -33,7 +54,8 @@ class _GuidedInspectionPageState extends State<GuidedInspectionPage> {
     setState(() => saving = true);
     try {
       await widget.store.save(WorkRecord(
-        id: 'checklist_' + DateTime.now().microsecondsSinceEpoch.toString(),
+        id: widget.existing?.id ??
+          'checklist_' + DateTime.now().microsecondsSinceEpoch.toString(),
         kind: 'room_checklist',
         updatedAt: DateTime.now().toUtc(),
         data: {
@@ -111,14 +133,30 @@ class _GuidedInspectionPageState extends State<GuidedInspectionPage> {
   }
 }
 
-class ChecklistHistoryPage extends StatelessWidget {
+class ChecklistHistoryPage extends StatefulWidget {
   const ChecklistHistoryPage({super.key, required this.store});
   final OfflineRecordStore store;
+  @override State<ChecklistHistoryPage> createState() => _ChecklistHistoryPageState();
+}
+
+class _ChecklistHistoryPageState extends State<ChecklistHistoryPage> {
+  late Future<List<WorkRecord>> records;
+  @override void initState() { super.initState(); refresh(); }
+  void refresh() { records = widget.store.list('room_checklist'); }
+
+  Future<void> edit(WorkRecord row) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => GuidedInspectionPage(store: widget.store, existing: row),
+    ));
+    if (mounted) setState(refresh);
+  }
 
   @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Room checklists')),
+    appBar: AppBar(title: const Text('Room checklists'),
+      actions: [IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh),
+        onPressed: () => setState(refresh))]),
     body: FutureBuilder<List<WorkRecord>>(
-      future: store.list('room_checklist'),
+      future: records,
       builder: (context, snap) {
         if (snap.hasError) return const Center(child: Text('Could not load checklists.'));
         if (!snap.hasData) return const Center(child: CircularProgressIndicator());
@@ -135,24 +173,8 @@ class ChecklistHistoryPage extends StatelessWidget {
             subtitle: Text(data['inspectionType'].toString() + ' • ' +
               (data['draft'] == true ? 'Draft' : 'Complete') + ' • ' +
               (s['issues'] ?? 0).toString() + ' need attention'),
-            onTap: () => showDialog<void>(context: context, builder: (context) =>
-              AlertDialog(
-                title: Text(data['room'].toString()),
-                content: SingleChildScrollView(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (final area in RoomChecklist.areas)
-                      Text(area + ': ' + (data['ratings'] is Map
-                        ? ((data['ratings'] as Map)[area] ?? 'Not checked').toString()
-                        : 'Not checked')),
-                    const SizedBox(height: 12),
-                    Text(data['notes']?.toString() ?? ''),
-                  ],
-                )),
-                actions: [TextButton(onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'))],
-              )),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => edit(rows[i]),
           ));
         });
       },
