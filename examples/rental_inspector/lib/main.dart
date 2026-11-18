@@ -1,5 +1,6 @@
 import 'package:android_app_foundation/android_app_foundation.dart';
 import 'package:flutter/material.dart';
+import 'guided_inspection_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,7 +12,11 @@ void main() {
       icon: Icons.home_work_outlined,
     ),
     features: [
-      AppFeature(title: 'New condition inspection', icon: Icons.fact_check_outlined,
+      AppFeature(title: 'Guided room checklist', icon: Icons.fact_check_outlined,
+        builder: (_) => GuidedInspectionPage(store: records)),
+      AppFeature(title: 'Saved room checklists', icon: Icons.list_alt_outlined,
+        builder: (_) => ChecklistHistoryPage(store: records)),
+      AppFeature(title: 'Quick condition entry', icon: Icons.fact_check_outlined,
         builder: (_) => InspectionPage(records: records)),
       AppFeature(title: 'Inspection history', icon: Icons.history_outlined,
         builder: (_) => InspectionHistory(records: records)),
