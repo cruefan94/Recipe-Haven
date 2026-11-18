@@ -42,7 +42,7 @@ class _InspectionPageState extends State<InspectionPage> {
     setState(() => saving = true);
     try {
       await widget.records.save(WorkRecord(
-        id: 'inspection_\$\{DateTime.now().microsecondsSinceEpoch\}',
+        id: 'inspection_${DateTime.now().microsecondsSinceEpoch}',
         kind: 'condition', updatedAt: DateTime.now().toUtc(),
         data: {
           'property': property.text.trim(), 'room': room.text.trim(),
@@ -110,8 +110,8 @@ class InspectionHistory extends StatelessWidget {
           final data = rows[i].data;
           return ListTile(
             leading: const Icon(Icons.home_work_outlined),
-            title: Text('\$\{data['property']\} — \$\{data['room']\}'),
-            subtitle: Text('\$\{data['inspectionType']\} • \$\{data['condition']\}'),
+            title: Text('${data['property']} — ${data['room']}'),
+            subtitle: Text('${data['inspectionType']} • ${data['condition']}'),
           );
         });
       },
