@@ -1,6 +1,7 @@
 import 'package:android_app_foundation/android_app_foundation.dart';
 import 'package:flutter/material.dart';
 import 'estimate_math.dart';
+import 'itemized_estimate_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,7 +13,9 @@ void main() {
       icon: Icons.construction, brightness: Brightness.dark,
     ),
     features: [
-      AppFeature(title: 'Create an estimate', icon: Icons.calculate_outlined,
+      AppFeature(title: 'Itemized estimate', icon: Icons.format_list_numbered,
+        builder: (_) => ItemizedEstimatePage(store: records)),
+      AppFeature(title: 'Quick estimate', icon: Icons.calculate_outlined,
         builder: (_) => EstimatePage(records: records)),
       AppFeature(title: 'Saved estimates', icon: Icons.receipt_long_outlined,
         builder: (_) => SavedEstimates(records: records)),
