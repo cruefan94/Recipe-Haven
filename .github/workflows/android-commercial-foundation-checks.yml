@@ -1,0 +1,65 @@
+name: Android Commercial App Foundation — Source Checks
+on:
+  push:
+    branches:
+      - feature/android-commercial-app-foundation-20261118
+    paths:
+      - packages/android_app_foundation/**
+      - examples/**
+      - .github/workflows/android-commercial-foundation-checks.yml
+  pull_request:
+    branches:
+      - feature/ingredient-products-and-cookbook-backup
+    paths:
+      - packages/android_app_foundation/**
+      - examples/**
+      - .github/workflows/android-commercial-foundation-checks.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Check reusable foundation
+        run: |
+          cd packages/android_app_foundation
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Check contractor estimating
+        run: |
+          cd examples/tradesman_pro
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Check job documentation
+        run: |
+          cd examples/jobproof
+          flutter pub get
+          flutter analyze
+      - name: Check property inspections
+        run: |
+          cd examples/rental_inspector
+          flutter pub get
+          flutter analyze
+      - name: Safety boundary
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          base = Path('packages/android_app_foundation')
+          for name in ('tradesman_pro','jobproof','rental_inspector'):
+              p = Path('examples') / name / 'pubspec.yaml'
+              text = p.read_text()
+              assert 'android_app_foundation:' in text
+              assert 'path: ../../packages/android_app_foundation' in text
+          assert not (base / 'ios').exists()
+          print('Android-only source foundation boundary verified.')
+          PY
