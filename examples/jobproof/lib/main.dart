@@ -50,7 +50,7 @@ class _CapturePageState extends State<CapturePage> {
       final root = await getApplicationDocumentsDirectory();
       final dir = Directory(p.join(root.path, 'evidence'));
       await dir.create(recursive: true);
-      final id = 'photo_\$\{DateTime.now().microsecondsSinceEpoch\}';
+      final id = 'photo_${DateTime.now().microsecondsSinceEpoch}';
       final ext = p.extension(picked.path).toLowerCase();
       final safeExt = ['.jpg', '.jpeg', '.png', '.webp'].contains(ext) ? ext : '.jpg';
       final filename = '$id$safeExt';
@@ -122,7 +122,7 @@ class EvidenceGallery extends StatelessWidget {
                     errorBuilder: (_, __, ___) => const SizedBox(
                       height: 70, child: Center(child: Text('Photo unavailable')))),
                   ListTile(title: Text(data['job']?.toString() ?? 'Job'),
-                    subtitle: Text('\$\{data['stage']\} • \$\{data['note'] ?? ''\}')),
+                    subtitle: Text('${data['stage']} • ${data['note'] ?? ''}')),
                 ]));
             });
           },
