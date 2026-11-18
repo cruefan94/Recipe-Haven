@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/android-commercial-app-foundation-20261118
+      - feature/android-business-core-features-20261118
     paths:
       - packages/android_app_foundation/**
       - examples/**
@@ -45,11 +46,13 @@ jobs:
           cd examples/jobproof
           flutter pub get
           flutter analyze
+          flutter test
       - name: Check property inspections
         run: |
           cd examples/rental_inspector
           flutter pub get
           flutter analyze
+          flutter test
       - name: Safety boundary
         run: |
           python3 - <<'PY'
