@@ -4,6 +4,7 @@ import 'package:android_app_foundation/android_app_foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'photo_review_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +18,8 @@ void main() {
     features: [
       AppFeature(title: 'Capture before / after', icon: Icons.add_a_photo_outlined,
         builder: (_) => CapturePage(store: store)),
+      AppFeature(title: 'Review before and after', icon: Icons.compare,
+        builder: (_) => PhotoReviewPage(store: store)),
       AppFeature(title: 'Job photo gallery', icon: Icons.photo_library_outlined,
         builder: (_) => EvidenceGallery(store: store)),
     ],
