@@ -2,6 +2,7 @@ import 'package:android_app_foundation/android_app_foundation.dart';
 import 'package:flutter/material.dart';
 import 'estimate_math.dart';
 import 'itemized_estimate_page.dart';
+import 'job_board_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +18,8 @@ void main() {
         builder: (_) => ItemizedEstimatePage(store: records)),
       AppFeature(title: 'Quick estimate', icon: Icons.calculate_outlined,
         builder: (_) => EstimatePage(records: records)),
+      AppFeature(title: 'My jobs', icon: Icons.work_outline,
+        builder: (_) => JobBoardPage(store: records)),
       AppFeature(title: 'Saved estimates', icon: Icons.receipt_long_outlined,
         builder: (_) => SavedEstimates(records: records)),
     ],
