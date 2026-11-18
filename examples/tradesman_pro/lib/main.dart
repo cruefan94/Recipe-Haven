@@ -63,7 +63,7 @@ class _EstimatePageState extends State<EstimatePage> {
     setState(() { saving = true; total = value; });
     try {
       await widget.records.save(WorkRecord(
-        id: 'estimate_\$\{DateTime.now().microsecondsSinceEpoch\}',
+        id: 'estimate_${DateTime.now().microsecondsSinceEpoch}',
         kind: 'estimate',
         updatedAt: DateTime.now().toUtc(),
         data: {
@@ -97,14 +97,14 @@ class _EstimatePageState extends State<EstimatePage> {
       TextField(controller: labour, keyboardType: const TextInputType.numberWithOptions(decimal: true),
         decoration: const InputDecoration(labelText: 'Labour (CAD)')),
       const SizedBox(height: 18),
-      Text('Overhead: \$overhead%'),
+      Text('Overhead: $overhead%'),
       Slider(value: overhead.toDouble(), min: 0, max: 100, divisions: 100,
         label: '$overhead%', onChanged: (v) => setState(() => overhead = v.round())),
-      Text('Markup: \$margin%'),
+      Text('Markup: $margin%'),
       Slider(value: margin.toDouble(), min: 0, max: 100, divisions: 100,
         label: '$margin%', onChanged: (v) => setState(() => margin = v.round())),
       if (total != null) Padding(padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text('Estimated total (before tax): \$\{EstimateMath.formatCents(total!)\}',
+        child: Text('Estimated total (before tax): ${EstimateMath.formatCents(total!)}',
           style: Theme.of(context).textTheme.titleLarge)),
       const SizedBox(height: 12),
       FilledButton(onPressed: saving ? null : save,
