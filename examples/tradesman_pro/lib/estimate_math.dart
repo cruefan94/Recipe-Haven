@@ -28,5 +28,5 @@ class EstimateMath {
   }
 
   static String formatCents(int cents) =>
-      '\$\{cents ~/ 100\}.\$\{(cents.abs() % 100).toString().padLeft(2, '0')\}';
+      '${cents ~/ 100}.${(cents.abs() % 100).toString().padLeft(2, '0')}';
 }
