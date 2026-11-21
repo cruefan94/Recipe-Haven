@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'estimate_math.dart';
 import 'itemized_estimate_page.dart';
 import 'job_board_page.dart';
+import 'customer_directory.dart';
+import 'billing_page.dart';
+import 'estimate_report.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +23,10 @@ void main() {
         builder: (_) => EstimatePage(records: records)),
       AppFeature(title: 'My jobs', icon: Icons.work_outline,
         builder: (_) => JobBoardPage(store: records)),
+      AppFeature(title: 'Customers', icon: Icons.people_outline,
+        builder: (_) => CustomerDirectoryPage(store: records)),
+      AppFeature(title: 'Invoices', icon: Icons.payments_outlined,
+        builder: (_) => BillingPage(store: records)),
       AppFeature(title: 'Saved estimates', icon: Icons.receipt_long_outlined,
         builder: (_) => SavedEstimates(records: records)),
     ],
@@ -140,6 +147,14 @@ class _SavedEstimatesState extends State<SavedEstimates> {
             title: Text(row.data['job']?.toString() ?? 'Estimate'),
             subtitle: Text(row.data['customer']?.toString() ?? ''),
             trailing: Text(EstimateMath.formatCents(row.data['totalCents'] as int)),
+            onTap: () async {
+              try {
+                await EstimateReport.share(row);
+              } catch (_) {
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Could not share estimate PDF.')));
+              }
+            },
           );
         });
       },
