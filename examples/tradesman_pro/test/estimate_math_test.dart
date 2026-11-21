@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tradesman_pro_starter/estimate_math.dart';
+import 'package:tradesman_pro/estimate_math.dart';
 void main() {
   test('exact CAD cents conversion', () {
     expect(EstimateMath.parseCents('12.30'), 1230);
