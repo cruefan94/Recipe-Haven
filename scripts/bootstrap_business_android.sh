@@ -52,6 +52,24 @@ if not gradle.exists():
 expected='com.cruefan94.'+app
 if expected not in gradle.read_text():
     raise SystemExit('Unexpected package namespace/application ID: '+expected)
+# Android Gradle Lint's CommentDetector crashes on image_picker_android
+# ExifDataCopier.java in the current hosted runner (NoSuchMethodError:
+# java.util.List.removeLast). Limit the workaround to that plugin's
+# lintVitalAnalyzeRelease task; keep Dart tests, other Android build checks,
+# signature checks, and app lint unaffected.
+root_gradle=Path('android/build.gradle.kts')
+if icon in ('photo', 'rental'):
+    original=root_gradle.read_text()
+    original += '\n' + (
+        'subprojects {\n'
+        '  if (name == "image_picker_android") {\n'
+        '    tasks.matching { it.name == "lintVitalAnalyzeRelease" }.configureEach {\n'
+        '      enabled = false\n'
+        '    }\n'
+        '  }\n'
+        '}\n')
+    root_gradle.write_text(original)
+
 print('Configured distinct package: '+expected+'; launcher: '+label)
 PY
 flutter pub get
