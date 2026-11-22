@@ -11,11 +11,13 @@ $$;
 create role anon nologin;
 create role authenticated nologin;
 grant usage on schema public,auth to authenticated;
+grant usage on schema public to anon;
 grant execute on function auth.uid() to authenticated;
 create publication supabase_realtime;
 
 \i examples/block_chat/supabase/migrations/0001_private_blocks.sql
 \i examples/block_chat/supabase/migrations/0002_member_control_and_invites.sql
+\i examples/block_chat/supabase/migrations/0003_public_health_check.sql
 
 insert into auth.users (id,raw_user_meta_data) values
 ('11111111-1111-4111-8111-111111111111','{"display_name":"Alex"}'),
@@ -252,4 +254,19 @@ begin
 end $$;
 
 reset role;
+set role anon;
+select public.block_chat_health() as health_version;
+reset role;
+do $$
+begin
+  if not has_function_privilege('anon','public.block_chat_health()','EXECUTE') then
+    raise exception 'Anonymous deployment probe is not accessible';
+  end if;
+  if has_function_privilege('anon','public.revoke_block_invite(uuid)','EXECUTE') then
+    raise exception 'Anonymous user may revoke Block invitations';
+  end if;
+  if has_function_privilege('anon','public.leave_block(uuid)','EXECUTE') then
+    raise exception 'Anonymous user may leave someone else from a Block';
+  end if;
+end $$;
 select 'Block Chat authentication, invites, approval, RLS, reports and removal passed' as result;
