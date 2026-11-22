@@ -168,7 +168,7 @@ class _BlockChatScreenState extends State<BlockChatScreen> {
       Expanded(child:StreamBuilder<List<Map<String,dynamic>>>(
         stream:messages,
         builder:(context,snapshot){
-          if(snapshot.hasError)return Center(child:Column(
+          if(snapshot.hasError){return Center(child:Column(
             mainAxisSize:MainAxisSize.min,
             children:[
               const Text('Messages could not be loaded.'),
@@ -176,11 +176,11 @@ class _BlockChatScreenState extends State<BlockChatScreen> {
               OutlinedButton(onPressed:()=>setState(load),
                 child:const Text('Try again')),
             ],
-          ));
-          if(!snapshot.hasData)return const Center(
-            child:CircularProgressIndicator());
+          ));}
+          if(!snapshot.hasData){return const Center(
+            child:CircularProgressIndicator());}
           final entries=snapshot.data!;
-          if(entries.isEmpty)return Center(
+          if(entries.isEmpty){return Center(
             child:Padding(padding:const EdgeInsets.all(26),
               child:Column(mainAxisSize:MainAxisSize.min,children:[
                 const Icon(Icons.forum_outlined,size:48,
@@ -191,7 +191,7 @@ class _BlockChatScreenState extends State<BlockChatScreen> {
                 if(mayPost)const Text('Start the conversation!'),
               ]),
             ),
-          );
+          );}
           return ListView.builder(
             reverse:true,
             padding:const EdgeInsets.only(top:12,bottom:8),
