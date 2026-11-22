@@ -15,6 +15,7 @@ grant execute on function auth.uid() to authenticated;
 create publication supabase_realtime;
 
 \i examples/block_chat/supabase/migrations/0001_private_blocks.sql
+\i examples/block_chat/supabase/migrations/0002_member_control_and_invites.sql
 
 insert into auth.users (id,raw_user_meta_data) values
 ('11111111-1111-4111-8111-111111111111','{"display_name":"Alex"}'),
@@ -130,5 +131,125 @@ begin
     raise exception 'Removed user can still read messages';
   end if;
 end $$;
+
+-- Version 0002: Block admins control invitations; non-admins cannot list or revoke.
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+select public.make_block_invite(current_setting('test.block_uuid')::uuid) as invite_two \gset
+select set_config('test.invite_two',:'invite_two',false);
+do $
+begin
+  if (select count(*) from public.active_block_invites(current_setting('test.block_uuid')::uuid)) <> 1 then
+    raise exception 'Active invite must be visible to admin';
+  end if;
+end $;
+select invite_id as invite_two_id from
+  public.active_block_invites(current_setting('test.block_uuid')::uuid) limit 1 \gset
+select set_config('test.invite_two_id',:'invite_two_id',false);
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
+do $
+declare denied boolean:=false;
+begin
+  begin
+    perform public.active_block_invites(current_setting('test.block_uuid')::uuid);
+  exception when others then denied:=true;
+  end;
+  if not denied then raise exception 'Non-admin listed active invites'; end if;
+end $;
+do $
+declare denied boolean:=false;
+begin
+  begin
+    perform public.revoke_block_invite(current_setting('test.invite_two_id')::uuid);
+  exception when others then denied:=true;
+  end;
+  if not denied then raise exception 'Non-admin revoked an invite'; end if;
+end $;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+select public.revoke_block_invite(current_setting('test.invite_two_id')::uuid);
+do $
+begin
+  if (select count(*) from public.active_block_invites(current_setting('test.block_uuid')::uuid)) <> 0 then
+    raise exception 'Revoked invitation still active';
+  end if;
+end $;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
+do $
+declare denied boolean:=false;
+begin
+  begin
+    perform public.redeem_block_invite(current_setting('test.invite_two'));
+  exception when others then denied:=true;
+  end;
+  if not denied then raise exception 'Revoked invitation was redeemed'; end if;
+end $;
+
+-- Pending applicants can cancel their request, and approved members can leave.
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+select public.make_block_invite(current_setting('test.block_uuid')::uuid) as invite_three \gset
+select set_config('test.invite_three',:'invite_three',false);
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
+select public.redeem_block_invite(current_setting('test.invite_three'));
+select public.leave_block(current_setting('test.block_uuid')::uuid);
+do $
+begin
+  if (select count(*) from public.blocks) <> 0 then
+    raise exception 'Cancelled applicant can still see the Block';
+  end if;
+end $;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+select public.make_block_invite(current_setting('test.block_uuid')::uuid) as invite_four \gset
+select set_config('test.invite_four',:'invite_four',false);
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
+select public.redeem_block_invite(current_setting('test.invite_four'));
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+select public.review_block_member(current_setting('test.block_uuid')::uuid,
+  '22222222-2222-4222-8222-222222222222'::uuid,true);
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
+select public.leave_block(current_setting('test.block_uuid')::uuid);
+do $
+begin
+  if public.is_block_member(current_setting('test.block_uuid')::uuid) then
+    raise exception 'Former member retained membership';
+  end if;
+end $;
+
+-- Founders cannot accidentally abandon their Block.
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+do $
+declare denied boolean:=false;
+begin
+  begin
+    perform public.leave_block(current_setting('test.block_uuid')::uuid);
+  exception when others then denied:=true;
+  end;
+  if not denied then raise exception 'Founder unexpectedly left their Block'; end if;
+end $;
+
+-- Messages can be redacted by their original approved sender, not outsiders.
+insert into public.block_messages(block_id,sender_id,channel,body) values (
+  current_setting('test.block_uuid')::uuid,auth.uid(),'general','This is an example');
+select id as own_message_id from public.block_messages
+  where sender_id=auth.uid() and body='This is an example' order by id desc limit 1 \gset
+select set_config('test.own_message_id',:'own_message_id',false);
+select public.delete_own_block_message(current_setting('test.own_message_id')::bigint);
+do $
+begin
+  if not exists (select 1 from public.block_messages
+      where id=current_setting('test.own_message_id')::bigint
+        and redacted_at is not null and body='Message removed by sender') then
+    raise exception 'Message redaction failed';
+  end if;
+end $;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
+do $
+declare denied boolean:=false;
+begin
+  begin
+    perform public.delete_own_block_message(current_setting('test.own_message_id')::bigint);
+  exception when others then denied:=true;
+  end;
+  if not denied then raise exception 'Outsider redacted another member message'; end if;
+end $;
+
 reset role;
 select 'Block Chat authentication, invites, approval, RLS, reports and removal passed' as result;
