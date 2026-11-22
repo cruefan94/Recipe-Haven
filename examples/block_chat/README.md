@@ -37,7 +37,8 @@ This is a **standalone, Android-only Flutter app**, using the same Flutter, Mate
 1. Create an independent Supabase project (not one containing Recipe Haven data).
 2. In the SQL Editor, apply
    supabase/migrations/0001_private_blocks.sql **then**
-   supabase/migrations/0002_member_control_and_invites.sql on the new project.
+   supabase/migrations/0002_member_control_and_invites.sql **then**
+   supabase/migrations/0003_public_health_check.sql on the new project.
 3. Enable Email authentication. Require email confirmation; set sensible
    authentication and email rate limits. Configure sender/email delivery.
 4. Under GitHub repository **Settings > Secrets and variables > Actions**,
@@ -48,6 +49,8 @@ This is a **standalone, Android-only Flutter app**, using the same Flutter, Mate
    cross-Block reads, posts, and invitation creation must fail; moderators can
    only act inside their own Blocks; non-admin invitation revocation must fail,
    revoked invitation codes must not work, and founders must not lose ownership.
+   The only anonymous RPC added by migration 0003 is `block_chat_health()`,
+   which returns a fixed version string without reading any community data.
 6. Only after verification, trigger the dedicated Block Chat Android workflow.
    It builds and uploads an independently named test APK with the configured project.
 
@@ -78,7 +81,7 @@ chat APK** without a configured, verified backend.
 
 ## Android source validation
 
-The PostgreSQL CI fixture applies both migration files and tests invitation
+The PostgreSQL CI fixture applies all three migration files and tests invitation
 redemption, approval, cross-Block isolation, revocation, self-exit, founder
 protection, and author-only message redaction. Flutter analysis and Android
 compilation run separately. Neither validates live Supabase configuration until
