@@ -47,8 +47,10 @@ class _AuthScreenState extends State<AuthScreen> {
     } catch (_) {
       if (mounted) notice('Could not connect. Check your internet and try again.');
     } finally {
-      password.clear();
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        password.clear();
+        setState(() => busy = false);
+      }
     }
   }
 
