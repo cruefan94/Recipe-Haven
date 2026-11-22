@@ -132,11 +132,11 @@ class _BlockMembersScreenState extends State<BlockMembersScreen> {
         Text('Join requests',style:Theme.of(context).textTheme.titleLarge),
         FutureBuilder<List<Map<String,dynamic>>>(future:pending,
           builder:(context,snapshot){
-            if(snapshot.hasError)return const ListTile(
-              title:Text('Join requests unavailable.'));
-            if(!snapshot.hasData)return const LinearProgressIndicator();
-            if(snapshot.data!.isEmpty)return const ListTile(
-              title:Text('No one is awaiting approval.'));
+            if(snapshot.hasError){return const ListTile(
+              title:Text('Join requests unavailable.'));}
+            if(!snapshot.hasData){return const LinearProgressIndicator();}
+            if(snapshot.data!.isEmpty){return const ListTile(
+              title:Text('No one is awaiting approval.'));}
             return Column(children:[
               for(final row in snapshot.data!)
                 Card(child:ListTile(
@@ -158,8 +158,8 @@ class _BlockMembersScreenState extends State<BlockMembersScreen> {
       Text('People in this Block',style:Theme.of(context).textTheme.titleLarge),
       FutureBuilder<List<Map<String,dynamic>>>(future:members,
         builder:(context,snapshot){
-          if(snapshot.hasError)return const ListTile(
-            title:Text('Members unavailable.'));
+          if(snapshot.hasError){return const ListTile(
+            title:Text('Members unavailable.'));}
           if(!snapshot.hasData)return const LinearProgressIndicator();
           return Column(children:[
             for(final row in snapshot.data!)
@@ -180,11 +180,11 @@ class _BlockMembersScreenState extends State<BlockMembersScreen> {
         Text('Reported messages',style:Theme.of(context).textTheme.titleLarge),
         FutureBuilder<List<Map<String,dynamic>>>(future:reports,
           builder:(context,snapshot){
-            if(snapshot.hasError)return const ListTile(
-              title:Text('Reports unavailable.'));
+            if(snapshot.hasError){return const ListTile(
+              title:Text('Reports unavailable.'));}
             if(!snapshot.hasData)return const LinearProgressIndicator();
-            if(snapshot.data!.isEmpty)return const ListTile(
-              title:Text('No reports awaiting review.'));
+            if(snapshot.data!.isEmpty){return const ListTile(
+              title:Text('No reports awaiting review.'));}
             return Column(children:[
               for(final row in snapshot.data!)
                 Card(child:Padding(padding:const EdgeInsets.all(12),
