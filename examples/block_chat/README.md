@@ -8,7 +8,9 @@ This is a **standalone, Android-only Flutter app**, using the same Flutter, Mate
 - Each private Block is created by a founder, with independent membership.
 - 160-bit one-time invitations issued by Block admins, expiring after 48 hours.
 - Code redemption places a member into **pending** status, not directly into chat.
-- Admins accept or reject join requests, remove members, issue codes and review message reports.
+- Admins accept or reject join requests, remove members, issue and revoke unused invite codes, and review message reports.
+- Pending applicants can withdraw requests; approved non-founders can leave their Blocks.
+- Members can redact their own posted messages, with a visible removal notice. This is not an irreversible erasure.
 - Each approved member sees only their joined Blocks.
 - Live text chat in General, Announcements, Neighbour Help, and Events channels.
 - Posting to Announcements is restricted to admins.
@@ -24,6 +26,9 @@ This is a **standalone, Android-only Flutter app**, using the same Flutter, Mate
 - No physical Android device or live two-account test yet.
 - No phone push notifications, voice, media attachments, user-level blocking,
   anti-harassment escalation or account deletion process yet.
+- A Block founder cannot leave until an audited ownership-transfer / Block-deletion
+  flow is implemented. Regular approved members and pending applicants can exit.
+- No full device-verified invitation expiry/revocation or realtime moderation test.
 - Invites plus administrator approval are NOT proof of a person's address.
 - The name "Block Chat" is temporary pending final trademark/brand clearance.
 
@@ -31,7 +36,8 @@ This is a **standalone, Android-only Flutter app**, using the same Flutter, Mate
 
 1. Create an independent Supabase project (not one containing Recipe Haven data).
 2. In the SQL Editor, apply
-   supabase/migrations/0001_private_blocks.sql on the new project.
+   supabase/migrations/0001_private_blocks.sql **then**
+   supabase/migrations/0002_member_control_and_invites.sql on the new project.
 3. Enable Email authentication. Require email confirmation; set sensible
    authentication and email rate limits. Configure sender/email delivery.
 4. Under GitHub repository **Settings > Secrets and variables > Actions**,
@@ -40,7 +46,8 @@ This is a **standalone, Android-only Flutter app**, using the same Flutter, Mate
 5. Review the migration and verify access-control behavior with two accounts:
    invited member cannot read before approval; joins are per Block; unauthorized
    cross-Block reads, posts, and invitation creation must fail; moderators can
-   only act inside their own Blocks.
+   only act inside their own Blocks; non-admin invitation revocation must fail,
+   revoked invitation codes must not work, and founders must not lose ownership.
 6. Only after verification, trigger the dedicated Block Chat Android workflow.
    It builds and uploads an independently named test APK with the configured project.
 
@@ -55,10 +62,13 @@ chat APK** without a configured, verified backend.
 - The SQL migration is source-only until someone explicitly applies it
   to their independent Supabase project.
 - Invite secrets are only returned once; only SHA-256 hashes are retained.
+  Admins can list invitation issuance/expiration metadata and revoke unused ones,
+  but cannot recover previously issued invitation codes.
 - Messages are readable to authorized members and backend administrators;
   they are NOT end-to-end encrypted.
-- If a member is removed, previously viewed or copied messages cannot be
-  retrieved from the user's device by revoking database permissions.
+- Removing membership cuts off future database access but does not recall
+  previously viewed, copied, or captured messages. Own-message removal redacts
+  the server copy; report excerpts and other copies may remain.
 - Supabase Email Auth stores account information under provider policies.
   Production requires privacy policy, user-data export/deletion, moderation
   procedures, abuse controls and independent penetration/security review.
@@ -67,6 +77,13 @@ chat APK** without a configured, verified backend.
 - No iOS work, no Copilot, and no source changes to the four existing apps.
 
 ## Android source validation
+
+The PostgreSQL CI fixture applies both migration files and tests invitation
+redemption, approval, cross-Block isolation, revocation, self-exit, founder
+protection, and author-only message redaction. Flutter analysis and Android
+compilation run separately. Neither validates live Supabase configuration until
+the dedicated Supabase instance is deployed.
+
 
 From examples/block_chat:
 
