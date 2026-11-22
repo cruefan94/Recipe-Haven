@@ -75,6 +75,40 @@ class _BlockChatScreenState extends State<BlockChatScreen> {
     }
   }
 
+  Future<void> deleteOwnMessage(int messageId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Remove your message?'),
+        content: const Text(
+          'This replaces your message with a removal notice for the Block. '
+          'Previously saved copies and reports may still exist.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Remove')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await widget.service.removeOwnMessage(messageId);
+      if (mounted) notify('Your message was removed.');
+    } catch (_) {
+      if (mounted) notify('Could not remove this message.');
+    }
+  }
+
+  Future<void> openMembers() async {
+    final left = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => BlockMembersScreen(
+        block: widget.block, service: widget.service,
+      )),
+    );
+    if (left == true && mounted) Navigator.of(context).pop();
+  }
+
   String timeLabel(Object? raw){
     if(raw is! String)return '';
     final stamp=DateTime.tryParse(raw)?.toLocal();
@@ -110,18 +144,27 @@ class _BlockChatScreenState extends State<BlockChatScreen> {
                     style:const TextStyle(
                       fontWeight:FontWeight.bold,fontSize:12,
                       color:Color(0xFFA6E3D4)))),
-                  if(!own&&!removed&&id is int)
-                    PopupMenuButton<String>(
-                      tooltip:'Message actions',
-                      icon:const Icon(Icons.more_horiz,size:18),
-                      onSelected:(action){
-                        if(action=='report')report(id);
-                      },
-                      itemBuilder:(_)=>const [
-                        PopupMenuItem(value:'report',
-                          child:Text('Report message')),
-                      ],
-                    ),
+                  if(!removed&&id is int)
+                     PopupMenuButton<String>(
+                       tooltip:'Message actions',
+                       icon:const Icon(Icons.more_horiz,size:18),
+                       onSelected:(action){
+                         if(action=='report') {
+                           report(id);
+                         } else if(action=='remove') {
+                           deleteOwnMessage(id);
+                         }
+                       },
+                       itemBuilder:(_) => own
+                         ? const [
+                             PopupMenuItem(value:'remove',
+                               child:Text('Remove my message')),
+                           ]
+                         : const [
+                             PopupMenuItem(value:'report',
+                               child:Text('Report message')),
+                           ],
+                     ),
                 ]),
                 Text(text,
                   style:TextStyle(
@@ -157,10 +200,7 @@ class _BlockChatScreenState extends State<BlockChatScreen> {
         IconButton(
           tooltip:'Block members and invitations',
           icon:const Icon(Icons.groups_outlined),
-          onPressed:()=>Navigator.of(context).push(MaterialPageRoute<void>(
-            builder:(_)=>BlockMembersScreen(
-              block:widget.block,service:widget.service),
-          )),
+          onPressed: openMembers,
         ),
       ],
     ),
