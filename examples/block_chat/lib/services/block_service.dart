@@ -81,6 +81,25 @@ class BlockService {
       'p_block':blockId,'p_user':userId,
     }).then((_) {});
 
+  /// Approved non-founders may leave. Pending applicants may cancel requests.
+  Future<void> leaveBlock(String blockId) =>
+    client.rpc('leave_block', params: {'p_block': blockId}).then((_) {});
+
+  /// Never returns the original invitation secret or its hash.
+  Future<List<Map<String,dynamic>>> activeInvites(String blockId) async {
+    final rows = await client.rpc('active_block_invites',
+      params: {'p_block': blockId});
+    return (rows as List).cast<Map<String,dynamic>>();
+  }
+
+  Future<void> revokeInvite(String invitationId) =>
+    client.rpc('revoke_block_invite',
+      params: {'p_invite': invitationId}).then((_) {});
+
+  Future<void> removeOwnMessage(int messageId) =>
+    client.rpc('delete_own_block_message',
+      params: {'p_message': messageId}).then((_) {});
+
   Stream<List<Map<String,dynamic>>> messages(String blockId,String channel) =>
     client.from('block_messages')
       .stream(primaryKey:['id'])
