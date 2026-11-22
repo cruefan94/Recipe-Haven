@@ -89,8 +89,7 @@ jobs:
           url="${BLOCK_CHAT_SUPABASE_URL%/}/rest/v1/blocks?select=id&limit=0"
           status="$(curl --silent --show-error --output "$RUNNER_TEMP/block-chat-schema-response" \
             --write-out '%{http_code}' --max-time 18 \
-            --header "apikey: $BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY" \
-            --header "Authorization: Bearer $BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY" "$url")"
+            --header "apikey: $BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY" "$url")"
           if [[ "$status" != '200' ]]; then
             echo "::error::Block Chat Supabase schema is unavailable (HTTP $status)."; exit 1
           fi
