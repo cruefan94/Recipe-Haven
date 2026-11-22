@@ -40,14 +40,13 @@ class _BlocksScreenState extends State<BlocksScreen>
     required String title, required String label,
     required String button, bool multiline = false,
   }) async {
-    final controller = TextEditingController();
-    try {
-      return await showDialog<String>(
+    String inputText = '';
+    return showDialog<String>(
         context: context,
         builder: (dialog) => AlertDialog(
           title: Text(title),
           content: TextField(
-            controller: controller,
+            onChanged: (value) => inputText = value,
             minLines: 1, maxLines: multiline ? 3 : 1,
             autofocus: true,
             decoration: InputDecoration(labelText: label),
@@ -56,16 +55,12 @@ class _BlocksScreenState extends State<BlocksScreen>
             TextButton(onPressed: () => Navigator.pop(dialog),
               child: const Text('Cancel')),
             FilledButton(
-              onPressed: () => Navigator.pop(dialog,controller.text.trim()),
+              onPressed: () => Navigator.pop(dialog,inputText.trim()),
               child: Text(button),
             ),
           ],
         ),
       );
-    } finally {
-      // The dialog is fully closed before discarding its controller.
-      controller.dispose();
-    }
   }
 
   Future<void> createBlock() async {
@@ -167,7 +162,7 @@ class _BlocksScreenState extends State<BlocksScreen>
     body: SafeArea(child: RefreshIndicator(
       onRefresh: () async {
         setState(refresh);
-        await blocks;
+        try { await blocks; } catch (_) { /* FutureBuilder shows retry. */ }
       },
       child: ListView(padding: const EdgeInsets.fromLTRB(18, 12, 18, 32),
         children: [
