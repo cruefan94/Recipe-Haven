@@ -126,6 +126,37 @@ class _BlocksScreenState extends State<BlocksScreen>
     }
   }
 
+  Future<void> cancelRequest(NeighbourhoodBlock entry) async {
+    if (operating || entry.approved) return;
+    final cancel = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Cancel your request?'),
+        content: Text('Withdraw your request to join ' + entry.name +
+          '? You will need another invitation to request access again.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Keep request')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Withdraw')),
+        ],
+      ),
+    );
+    if (cancel != true || !mounted) return;
+    setState(() => operating = true);
+    try {
+      await service.leaveBlock(entry.id);
+      if (mounted) {
+        setState(refresh);
+        toast('Your request was withdrawn.');
+      }
+    } catch (_) {
+      if (mounted) toast('Could not withdraw the request. Please try again.');
+    } finally {
+      if (mounted) setState(() => operating = false);
+    }
+  }
+
   Future<void> openBlock(NeighbourhoodBlock entry) async {
     if (!entry.approved) {
       toast('Membership is pending administrator approval.');
@@ -224,8 +255,12 @@ class _BlocksScreenState extends State<BlocksScreen>
                       'Waiting for approval'),
                     trailing: entry.approved ?
                       const Icon(Icons.chevron_right) :
-                      const Icon(Icons.hourglass_top_outlined),
-                    onTap:()=>openBlock(entry),
+                      IconButton(
+                        tooltip: 'Withdraw join request',
+                        icon: const Icon(Icons.cancel_outlined),
+                        onPressed: operating ? null : () => cancelRequest(entry),
+                      ),
+                    onTap: entry.approved ? () => openBlock(entry) : null,
                   )),
               ]);
             },
