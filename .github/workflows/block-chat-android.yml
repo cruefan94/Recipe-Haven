@@ -86,12 +86,18 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$BLOCK_CHAT_SUPABASE_URL" == https://* ]] || exit 1
-          url="${BLOCK_CHAT_SUPABASE_URL%/}/rest/v1/blocks?select=id&limit=0"
-          status="$(curl --silent --show-error --output "$RUNNER_TEMP/block-chat-schema-response" \
-            --write-out '%{http_code}' --max-time 18 \
-            --header "apikey: $BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY" "$url")"
-          if [[ "$status" != '200' ]]; then
-            echo "::error::Block Chat Supabase schema is unavailable (HTTP $status)."; exit 1
+          # The Block tables intentionally forbid unauthenticated reads.
+          # Check only the constant, non-sensitive, anonymous health RPC.
+          url="${BLOCK_CHAT_SUPABASE_URL%/}/rest/v1/rpc/block_chat_health"
+          status="$(curl --silent --show-error --output "$RUNNER_TEMP/block-chat-health-response" \
+            --write-out '%{http_code}' --max-time 18 --request POST \
+            --header "Content-Type: application/json" \
+            --header "apikey: $BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY" \
+            --data '{}' "$url")"
+          if [[ "$status" != '200' ]] || \
+             [[ "$(cat "$RUNNER_TEMP/block-chat-health-response")" != '"block-chat-v3"' ]]; then
+            echo "::error::Block Chat backend is unavailable or migrations 0001-0003 are incomplete (HTTP $status)."
+            exit 1
           fi
       - name: Build backend-configured Android test APK
         if: env.BACKEND_CONFIGURED == 'true'
