@@ -14,6 +14,7 @@ class _BlockMembersScreenState extends State<BlockMembersScreen> {
   late Future<List<Map<String,dynamic>>> members;
   late Future<List<Map<String,dynamic>>> pending;
   late Future<List<Map<String,dynamic>>> reports;
+  late Future<List<Map<String,dynamic>>> invitations;
   bool operating=false;
   @override void initState(){super.initState();refresh();}
   void refresh(){
@@ -23,6 +24,9 @@ class _BlockMembersScreenState extends State<BlockMembersScreen> {
       : Future.value(<Map<String,dynamic>>[]);
     reports=widget.block.administrator
       ? widget.service.pendingReports(widget.block.id)
+      : Future.value(<Map<String,dynamic>>[]);
+    invitations=widget.block.administrator
+      ? widget.service.activeInvites(widget.block.id)
       : Future.value(<Map<String,dynamic>>[]);
   }
   void toast(String message)=>ScaffoldMessenger.of(context)
@@ -60,6 +64,7 @@ class _BlockMembersScreenState extends State<BlockMembersScreen> {
             child:const Text('Close')),
         ],
       ));
+      if (mounted) setState(refresh);
     } catch (_) {if(mounted)toast('Could not create invitation.');}
     finally {if(mounted)setState(()=>operating=false);}
   }
@@ -109,6 +114,77 @@ class _BlockMembersScreenState extends State<BlockMembersScreen> {
     finally {if(mounted)setState(()=>operating=false);}
   }
 
+  Future<void> revokeInvite(Map<String,dynamic> invitation) async {
+    if (operating || !widget.block.administrator) return;
+    final id = invitation['invite_id'];
+    if (id is! String) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Revoke this invitation?'),
+        content: const Text(
+          'This code will immediately stop working. '
+          'Previously approved members will not be affected.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Keep code')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Revoke')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => operating = true);
+    try {
+      await widget.service.revokeInvite(id);
+      if (mounted) {
+        setState(refresh);
+        toast('Invitation revoked.');
+      }
+    } catch (_) {
+      if (mounted) toast('Could not revoke the invitation.');
+    } finally {
+      if (mounted) setState(() => operating = false);
+    }
+  }
+
+  Future<void> leaveBlock() async {
+    if (operating || widget.block.role == 'owner') return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Leave this Block?'),
+        content: Text('Leave ' + widget.block.name +
+          '? You will lose access and need a new invitation '
+          'and administrator approval to return.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Stay')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Leave Block')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => operating = true);
+    try {
+      await widget.service.leaveBlock(widget.block.id);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) {
+        toast('Could not leave this Block. Please try again.');
+        setState(() => operating = false);
+      }
+    }
+  }
+
+  String expiresLabel(Map<String,dynamic> row) {
+    final raw = row['expires_at'];
+    final date = raw is String ? DateTime.tryParse(raw)?.toLocal() : null;
+    if (date == null) return 'Expires soon';
+    return 'Expires ' + date.toString().split('.').first;
+  }
+
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:Text(widget.block.name+' members'),
       actions:[IconButton(onPressed:()=>setState(refresh),
@@ -128,6 +204,36 @@ class _BlockMembersScreenState extends State<BlockMembersScreen> {
               label:const Text('Create invitation')),
           ]),
         )),
+        const SizedBox(height:16),
+        Text('Active invitations',style:Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height:4),
+        const Text('Codes are shown only when first created. '
+          'Use a new code for every neighbour.'),
+        FutureBuilder<List<Map<String,dynamic>>>(future:invitations,
+          builder:(context,snapshot){
+            if(snapshot.hasError){
+              return const ListTile(title:Text('Invitations unavailable.'));
+            }
+            if(!snapshot.hasData){
+              return const LinearProgressIndicator();
+            }
+            if(snapshot.data!.isEmpty){
+              return const ListTile(title:Text('No unredeemed invitations.'));
+            }
+            return Column(children:[
+              for(final invite in snapshot.data!)
+                Card(child:ListTile(
+                  leading:const Icon(Icons.key_outlined),
+                  title:const Text('Unused invitation'),
+                  subtitle:Text(expiresLabel(invite)),
+                  trailing:IconButton(
+                    tooltip:'Revoke invitation',
+                    onPressed:operating?null:()=>revokeInvite(invite),
+                    icon:const Icon(Icons.block_outlined),
+                  ),
+                )),
+            ]);
+          }),
         const SizedBox(height:16),
         Text('Join requests',style:Theme.of(context).textTheme.titleLarge),
         FutureBuilder<List<Map<String,dynamic>>>(future:pending,
@@ -206,6 +312,14 @@ class _BlockMembersScreenState extends State<BlockMembersScreen> {
                 )),
             ]);
           }),
+      ],
+      if (widget.block.role != 'owner') ...[
+        const SizedBox(height: 24),
+        OutlinedButton.icon(
+          onPressed: operating ? null : leaveBlock,
+          icon: const Icon(Icons.exit_to_app_outlined),
+          label: const Text('Leave this Block'),
+        ),
       ],
       const SizedBox(height:24),
       const Text('Invitations are not proof of residence. '
