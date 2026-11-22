@@ -110,7 +110,7 @@ end $$;
 do $$
 declare report_id bigint;
 begin
-  select id into report_id from public.block_reports limit 1;
+  select r.report_id into report_id from public.pending_block_reports(current_setting('test.block_uuid')::uuid) r limit 1;
   if report_id is null then raise exception 'Message report missing'; end if;
   perform public.moderate_block_report(report_id,true);
   if not exists (select 1 from public.block_messages
