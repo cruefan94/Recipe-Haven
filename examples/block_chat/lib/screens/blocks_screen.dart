@@ -196,7 +196,7 @@ class _BlocksScreenState extends State<BlocksScreen>
           FutureBuilder<List<NeighbourhoodBlock>>(
             future: blocks,
             builder:(context,snapshot) {
-              if (snapshot.hasError) return Card(
+              if (snapshot.hasError) { return Card(
                 child: Padding(padding: const EdgeInsets.all(18),
                   child: Column(children: [
                     const Text('Unable to load your Blocks. Check your connection.'),
@@ -204,15 +204,15 @@ class _BlocksScreenState extends State<BlocksScreen>
                     OutlinedButton(onPressed:()=>setState(refresh),
                       child:const Text('Try again')),
                   ])),
-              );
-              if (!snapshot.hasData) return const Center(
+              ); }
+              if (!snapshot.hasData) { return const Center(
                 child: Padding(padding:EdgeInsets.all(22),
                   child:CircularProgressIndicator()),
-              );
-              if (snapshot.data!.isEmpty) return const Card(
+              ); }
+              if (snapshot.data!.isEmpty) { return const Card(
                 child:Padding(padding:EdgeInsets.all(20),
                   child:Text('You have no Blocks yet. Create one or enter an invitation code.')),
-              );
+              ); }
               return Column(children: [
                 for (final entry in snapshot.data!)
                   Card(child: ListTile(
