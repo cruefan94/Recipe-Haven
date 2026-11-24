@@ -72,6 +72,16 @@ guarantee live store listings.
 6. Look for keyboard flicker, scrolling problems, clipping and Android back
    navigation. Retest after fixes.
 
+## Future idea — dietary and preference filters (NOT IMPLEMENTED)
+
+**Status:** Idea only, parked for later evaluation at the owner's request on 2026-11-23. Do **not** treat as a committed feature, a release promise, or authorization to implement.
+
+Consider an optional **Filters** control beside the Find Recipes search field. For example, after entering "tacos," a person could select gluten-free, lactose-free, dairy-free, nut-free, vegetarian, vegan, no meat, other ingredient exclusions, and optional nutrition preferences (e.g. lower sodium). Tapping **Apply Filters** would narrow or prioritize the recipe results; a person could use filters once or save defaults. Show active filters clearly without adding UI clutter. Investigate reusing the same preferences in **Cook With What I Have**, shared by the Professional and Full editions.
+
+Accessibility intent: easy for older and less technical cooks, no AI prompt required; a simple expandable options menu rather than a complex page.
+
+Safety and feasibility before any implementation: ingredient/source metadata may be incomplete; lactose-free is not the same as dairy-free; do not imply that a recipe is guaranteed allergen-safe or cross-contact-free. Distinguish verified tags from estimated matches and missing data. Confirm whether recipe providers offer sufficient metadata, then test filter accuracy and usability.
+
 ## Next implementation priorities
 
 - Verify the Kitchen Tools tab, conversion accuracy and Android timer notifications on physical devices (screen locked/background, permission denied, exact alarm denied, pause/resume and stop).
