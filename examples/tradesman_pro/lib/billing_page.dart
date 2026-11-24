@@ -54,9 +54,37 @@ class _BillingPageState extends State<BillingPage> {
     final base = quote.data['totalCents'];
     if (base is! int || base < 0) { notify('Saved estimate has invalid totals.'); return; }
     final tax = BillingMath.taxAmount(base, rate);
-    final now = DateTime.now();
     setState(() => saving = true);
     try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Confirm final invoice'),
+          content: Text(
+            'Customer: ' + (quote.data['customer']?.toString() ?? '') + '\n' +
+            'Job: ' + (quote.data['job']?.toString() ?? '') + '\n' +
+            'Subtotal: CAD ' + ItemizedEstimate.money(base) + '\n' +
+            'Tax (' + (rate / 100).toStringAsFixed(2) + '%): CAD ' +
+              ItemizedEstimate.money(tax) + '\n' +
+            'Total: CAD ' + ItemizedEstimate.money(base + tax) + '\n\n' +
+            'Review the amounts and applicable tax rate before creating the ' +
+              'final invoice. Each estimate can create only one final invoice.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Create invoice'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || confirmed != true) return;
+      final now = DateTime.now();
       final previousInvoices = await widget.store.list('invoice');
       if (BillingMath.alreadyInvoiced(previousInvoices, quote.id)) {
         if (mounted) notify('This estimate already has an invoice. Review it below.');
