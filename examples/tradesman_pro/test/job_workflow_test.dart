@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tradesman_pro_starter/job_workflow.dart';
+import 'package:tradesman_pro/job_workflow.dart';
 
 void main() {
   test('job stages are predefined and validated', () {

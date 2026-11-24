@@ -1,6 +1,8 @@
 import 'package:android_app_foundation/android_app_foundation.dart';
 import 'package:flutter/material.dart';
 import 'guided_inspection_page.dart';
+import 'property_overview_page.dart';
+import 'room_photo_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,6 +14,10 @@ void main() {
       icon: Icons.home_work_outlined,
     ),
     features: [
+      AppFeature(title: 'My properties', icon: Icons.apartment_outlined,
+        builder: (_) => PropertyOverviewPage(store: records)),
+      AppFeature(title: 'Room photographs', icon: Icons.add_a_photo_outlined,
+        builder: (_) => RoomPhotoPage(store: records)),
       AppFeature(title: 'Guided room checklist', icon: Icons.fact_check_outlined,
         builder: (_) => GuidedInspectionPage(store: records)),
       AppFeature(title: 'Saved room checklists', icon: Icons.list_alt_outlined,

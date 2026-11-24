@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tradesman_pro_starter/itemized_estimate.dart';
+import 'package:tradesman_pro/itemized_estimate.dart';
 
 void main() {
   test('cent-exact line totals and overhead/markup', () {

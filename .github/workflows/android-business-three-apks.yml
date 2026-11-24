@@ -1,0 +1,134 @@
+name: Android Business Apps — Reviewed Test APK Build
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Select the app whose code was reviewed before spending build minutes'
+        type: choice
+        required: true
+        options:
+          - tradesman_pro
+          - jobproof
+          - rental_inspector
+      reviewed:
+        description: 'Code diff, dependencies, security impact and relevant tests have been reviewed'
+        type: boolean
+        required: true
+        default: false
+      owner_approved:
+        description: 'Owner explicitly approved a GitHub Actions test and APK build for this app and selected ref'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: business-reviewed-test-apk-${{ github.ref }}-${{ inputs.app }}
+  cancel-in-progress: true
+
+jobs:
+  compile-reviewed-test-apk:
+    if: ${{ inputs.reviewed && inputs.owner_approved }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate selected product
+        id: product
+        shell: bash
+        env:
+          APP: ${{ inputs.app }}
+        run: |
+          set -euo pipefail
+          case "$APP" in
+            tradesman_pro)
+              package_id=com.cruefan94.tradesman_pro
+              artifact=Tradesman-Pro-Android-TEST
+              ;;
+            jobproof)
+              package_id=com.cruefan94.jobproof
+              artifact=JobProof-Android-TEST
+              ;;
+            rental_inspector)
+              package_id=com.cruefan94.rental_inspector
+              artifact=Rental-Inspector-Android-TEST
+              ;;
+            *)
+              echo "::error::Unsupported product"; exit 2
+              ;;
+          esac
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+          echo "package_id=$package_id" >> "$GITHUB_OUTPUT"
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Gate: do not invoke Android/Gradle APK compilation if Flutter checks fail.
+      - name: Preflight shared foundation and privacy-safe diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd packages/android_app_foundation
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Preflight selected app (analysis and all tests)
+        shell: bash
+        env:
+          APP: ${{ steps.product.outputs.app }}
+        run: |
+          set -euo pipefail
+          cd "examples/$APP"
+          flutter pub get
+          flutter analyze
+          flutter test
+
+      # Intentionally build only the reviewed app, never all three by default.
+      - name: Bootstrap selected Android test application
+        shell: bash
+        env:
+          APP: ${{ steps.product.outputs.app }}
+        run: bash scripts/bootstrap_business_android.sh "$APP"
+      - name: Build selected Android test APK
+        shell: bash
+        env:
+          APP: ${{ steps.product.outputs.app }}
+        run: |
+          set -euo pipefail
+          cd "examples/$APP"
+          # Temporary signing identity: fresh-install test APK only.
+          flutter build apk --release --build-name=0.5.0 --build-number=$((60000+GITHUB_RUN_NUMBER))
+      - name: Verify package identity, APK signature and file digest
+        shell: bash
+        env:
+          APP: ${{ steps.product.outputs.app }}
+          PACKAGE_ID: ${{ steps.product.outputs.package_id }}
+          ARTIFACT: ${{ steps.product.outputs.artifact }}
+        run: |
+          set -euo pipefail
+          apk="examples/$APP/build/app/outputs/flutter-apk/app-release.apk"
+          test -s "$apk"
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$sdk"
+          aapt="$(find "$sdk/build-tools" -type f -name aapt | sort -V | tail -1)"
+          apksigner="$(find "$sdk/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -n "$aapt" && test -n "$apksigner"
+          "$apksigner" verify --verbose --print-certs "$apk"
+          "$aapt" dump badging "$apk" | grep -F "package: name='$PACKAGE_ID'"
+          mkdir -p release-test
+          cp "$apk" "release-test/$ARTIFACT.apk"
+          (cd release-test && sha256sum "$ARTIFACT.apk" > "$ARTIFACT.sha256")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.product.outputs.artifact }}
+          path: release-test/
+          retention-days: 30
+          if-no-files-found: error

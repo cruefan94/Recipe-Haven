@@ -1,4 +1,4 @@
-name: rental_inspector_starter
+name: rental_inspector
 description: Android-only property inspection starter (temporary product name).
 publish_to: none
 version: 0.1.0+1
@@ -9,6 +9,9 @@ dependencies:
     sdk: flutter
   android_app_foundation:
     path: ../../packages/android_app_foundation
+  image_picker: ^1.2.4
+  path: ^1.9.1
+  path_provider: ^2.1.6
 dev_dependencies:
   flutter_test:
     sdk: flutter

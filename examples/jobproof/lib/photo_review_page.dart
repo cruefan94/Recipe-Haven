@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'photo_index.dart';
+import 'job_photo_report.dart';
 
 /// Job-filtered photo timeline and latest before/after comparison.
 class PhotoReviewPage extends StatefulWidget {
@@ -87,6 +88,19 @@ class _PhotoReviewPageState extends State<PhotoReviewPage> {
                     child: preview(PhotoIndex.latestStage(records, 'After'), root)),
                 ])),
               ]),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () async {
+                  try {
+                    await JobPhotoReport.share(job, records, root);
+                  } catch (_) {
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not export photo report.')));
+                  }
+                },
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                label: const Text('Share job photo report'),
+              ),
               const SizedBox(height: 22),
               Text('Photo timeline (' + records.length.toString() + ')',
                 style: Theme.of(context).textTheme.titleLarge),

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rental_inspector_starter/inspection_checklist.dart';
+import 'package:rental_inspector/inspection_checklist.dart';
 
 void main() {
   test('unrated entries remain drafts', () {

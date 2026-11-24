@@ -37,7 +37,7 @@ class _CapturePageState extends State<CapturePage> {
   bool busy = false;
   @override void dispose() { job.dispose(); note.dispose(); super.dispose(); }
 
-  Future<void> capture() async {
+  Future<void> capture([ImageSource source = ImageSource.camera]) async {
     if (busy) return;
     if (job.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -47,7 +47,7 @@ class _CapturePageState extends State<CapturePage> {
     setState(() => busy = true);
     File? saved;
     try {
-      final picked = await ImagePicker().pickImage(source: ImageSource.camera,
+      final picked = await ImagePicker().pickImage(source: source,
         maxWidth: 2048, imageQuality: 82);
       if (picked == null) return;
       final root = await getApplicationDocumentsDirectory();
@@ -92,9 +92,13 @@ class _CapturePageState extends State<CapturePage> {
       TextField(controller: note, maxLines: 3,
         decoration: const InputDecoration(labelText: 'Photo note (optional)')),
       const SizedBox(height: 22),
-      FilledButton.icon(onPressed: busy ? null : capture,
+      FilledButton.icon(onPressed: busy ? null : () => capture(),
         icon: const Icon(Icons.camera_alt_outlined),
         label: Text(busy ? 'Saving…' : 'Take photo')),
+      const SizedBox(height: 12),
+      OutlinedButton.icon(onPressed: busy ? null : () => capture(ImageSource.gallery),
+        icon: const Icon(Icons.photo_library_outlined),
+        label: const Text('Choose from gallery')),
     ])),
   );
 }

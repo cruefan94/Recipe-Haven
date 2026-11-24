@@ -1,6 +1,6 @@
 import 'package:android_app_foundation/android_app_foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jobproof_starter/photo_index.dart';
+import 'package:jobproof/photo_index.dart';
 
 void main() {
   final records = [
