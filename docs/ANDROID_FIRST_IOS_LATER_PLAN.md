@@ -17,6 +17,16 @@
 
 **Current operational note:** The business-app APK workflow on this branch runs on every push and builds a three-app matrix. Evaluate path filters and an explicit manual/release build gate as a separate targeted CI optimization; preserve tests needed for actual code changes. Documentation-only updates should not trigger costly builds when avoidable.
 
+## Owner approval gate for credit-consuming tests and builds (2026-11-24)
+
+**Standing instruction:** No agent-initiated GitHub Actions run, CI preflight job, APK build, firmware build or other metered test/build without the owner's **fresh, explicit approval** for that particular run. This applies across Northern Circuit Studios development; individual repositories must be configured separately. This policy does not waive mandatory security, unit, integration or physical-device tests prior to release.
+
+Before requesting approval, do free/non-metered inspection where available: read the diff, check dependencies/configuration/known failures, review likely compile errors, audit privacy/security and record confidence and remaining risks. Avoid describing an unexecuted test as passed.
+
+At a recommended build checkpoint, present an **approval request** identifying the app/repository, exact branch/commit, checks to be run, what will consume GitHub Actions minutes or other credits, any known risks, and the intended artifact. Request a clear yes/no decision. **No reply, silence, general past authorization or permission for a different run does not count as approval.** If declined, leave the build untriggered and continue independent code review. After an approved run, inspect logs once, fix the root cause and seek approval again before another credit-consuming rerun.
+
+**Current business APK workflow:** It is manual-only, selects one product, and defaults both the review and owner-approval checkboxes to false. They must both be checked before the job executes. The owner-approval checkbox is a **human attestation, not cryptographic or GitHub identity enforcement**; do not assume it proves who authorized a run. Stronger enforcement would require separately configured protected GitHub environments or comparable repository controls, subject to availability. Do not misrepresent this repository's configuration as automatically applying to other repositories.
+
 ## Parallel priority tracks
 
 1. **Tradesman Pro:** Most promising initial revenue pilot for solo tradespeople, part-time/side-job contractors, startup contractors, and crews of roughly 1–5. Target a simple offline **customer -> itemized quote -> PDF -> job status -> invoice -> paid/unpaid** workflow, not enterprise integrations. Start with fictional demo customers until storage/privacy review. Ask a small number of consenting Android users in this audience to try their real workflow, identify where they get stuck, and report bugs. Validate willingness to pay separately rather than asserting demand.
