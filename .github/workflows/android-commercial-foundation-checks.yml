@@ -1,20 +1,6 @@
 name: Android Commercial App Foundation — Source Checks
 on:
-  push:
-    branches:
-      - feature/android-commercial-app-foundation-20261118
-      - feature/android-business-core-features-20261118
-    paths:
-      - packages/android_app_foundation/**
-      - examples/**
-      - .github/workflows/android-commercial-foundation-checks.yml
-  pull_request:
-    branches:
-      - feature/ingredient-products-and-cookbook-backup
-    paths:
-      - packages/android_app_foundation/**
-      - examples/**
-      - .github/workflows/android-commercial-foundation-checks.yml
+  # Reviewed owner-approved run only; no push/PR auto-spend.
   workflow_dispatch:
 permissions:
   contents: read
