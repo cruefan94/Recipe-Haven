@@ -1,10 +1,8 @@
 name: Recipe Haven — Professional and Full Android Test APKs
 
 on:
-  push:
-    branches: [feature/ingredient-products-and-cookbook-backup]
+  # Reviewed owner-approved run only; no push/PR auto-spend.
   workflow_dispatch:
-
 permissions:
   contents: read
 
