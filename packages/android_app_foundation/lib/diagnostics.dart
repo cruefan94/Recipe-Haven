@@ -27,7 +27,7 @@ class DiagnosticReport {
     required this.isTest,
     required DateTime occurredAt,
   }) : occurredAt = occurredAt.toUtc() {
-    if (!RegExp(r'^\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}(?:\\+\\d{1,8})?\$')
+    if (!RegExp(r'^[0-9]{1,4}[.][0-9]{1,4}[.][0-9]{1,4}([+][0-9]{1,8})?$')
         .hasMatch(appVersion)) {
       throw const FormatException('Invalid app version');
     }
