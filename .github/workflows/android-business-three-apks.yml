@@ -36,6 +36,14 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Verify shared privacy-safe crash diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd packages/android_app_foundation
+          flutter pub get
+          flutter analyze
+          flutter test test/diagnostics_test.dart
       - name: Analyze and test independent app
         shell: bash
         run: |
