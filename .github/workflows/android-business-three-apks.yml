@@ -15,6 +15,11 @@ on:
         type: boolean
         required: true
         default: false
+      owner_approved:
+        description: 'Owner explicitly approved a GitHub Actions test and APK build for this app and selected ref'
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -25,7 +30,7 @@ concurrency:
 
 jobs:
   compile-reviewed-test-apk:
-    if: ${{ inputs.reviewed }}
+    if: ${{ inputs.reviewed && inputs.owner_approved }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
