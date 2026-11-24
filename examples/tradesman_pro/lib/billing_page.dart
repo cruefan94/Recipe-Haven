@@ -3,6 +3,11 @@ import 'package:android_app_foundation/android_app_foundation.dart';
 import 'itemized_estimate.dart';
 
 class BillingMath {
+  /// A saved estimate must not silently generate multiple final invoices.
+  static bool alreadyInvoiced(Iterable<WorkRecord> invoices, String estimateId) =>
+    invoices.any((invoice) =>
+      invoice.kind == 'invoice' && invoice.data['quoteId'] == estimateId);
+
   static int taxBasisPoints(String percent) {
     final rate = ItemizedEstimate.parseHundredths(percent, allowZero: true);
     if (rate > 10000) throw const FormatException('Tax rate must be 0 to 100%');
@@ -52,6 +57,11 @@ class _BillingPageState extends State<BillingPage> {
     final now = DateTime.now();
     setState(() => saving = true);
     try {
+      final previousInvoices = await widget.store.list('invoice');
+      if (BillingMath.alreadyInvoiced(previousInvoices, quote.id)) {
+        if (mounted) notify('This estimate already has an invoice. Review it below.');
+        return;
+      }
       await widget.store.save(WorkRecord(
         id: 'invoice_' + now.microsecondsSinceEpoch.toString(),
         kind: 'invoice', updatedAt: now.toUtc(),
@@ -138,7 +148,7 @@ class _BillingPageState extends State<BillingPage> {
         decoration: const InputDecoration(labelText: 'Sales tax rate (%)')),
       const Padding(
         padding: EdgeInsets.symmetric(vertical: 10),
-        child: Text('Confirm the applicable tax rate before issuing. No payment collection is performed.'),
+        child: Text('Confirm the applicable tax rate before issuing. Each saved estimate can create one final invoice; deposit or progress billing is not supported. No payment collection is performed.'),
       ),
       FutureBuilder<List<WorkRecord>>(future: quotes, builder: (context, snap) =>
         FilledButton.icon(
