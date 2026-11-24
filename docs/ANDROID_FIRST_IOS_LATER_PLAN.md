@@ -20,6 +20,19 @@
 - Working end-to-end primary user task; PDF and money calculations independently checked with CAD/tax caveats, no unsupported legal or payment claims.
 - Small Android beta cohort with clearly tracked bugs, reproducible steps, acceptance criteria and a stop/go decision. The website's Android-only beta and private, post-acceptance NDA process stay unchanged unless deliberately revised.
 
+## Deferred studio-wide diagnostics and crash reporting — production roadmap note (2026-11-24)
+
+**Decision: Documentation only. Do not implement or deploy the Cloudflare receiver, database, dashboard, telemetry upload, or notification service now.** Revisit per application as it becomes otherwise ready for production or broader beta. This idea applies to all five Northern Circuit Studios apps: Recipe Haven (Professional/Full), Tradesman Pro, JobProof, Rental Inspector and Block Chat.
+
+- **Proposed architecture, not a live service:** One separate private Cloudflare Worker for ingest, D1 storage with bounded retention, and an Access-protected Northern Circuit Studios dashboard; optional alerts containing no report details. Keep it isolated from the website and existing Flipper AI Worker. Reassess Cloudflare pricing, capacity, hosting location, and any applicable legal requirements at implementation time.
+- **Minimize and strictly allowlist fields:** app identity and version, generic error category and affected feature area, coarse technical state necessary for diagnosis, time, and a test-event flag. Do not transmit customer names, contacts, photos, invoice content, locations, free-form exception messages, raw stack traces, paths, credentials, or arbitrary identifiers. Review whether timestamps, IP addresses, and platform metadata could still constitute personal information; suppress or minimize them in storage/logs.
+- **Privacy and security before activation:** meaningful in-app notice, appropriate consent and controls, transport security, authenticated/abuse-resistant ingestion, dashboard access controls, encrypted storage, rate limiting, deletion/retention rules, and a documented incident response. Perform the jurisdiction-specific privacy review before any automatic upload.
+- **Reliability:** add bounded, protected local queuing only if necessary; a hard crash might require delivery on the next launch. Separate handled Flutter errors from uncaught platform/native crashes and account for Android/iOS differences.
+- **Pre-release verification when implemented:** generate controlled test exceptions and safe simulated crashes, test disabled/no-consent paths, inspect exact outbound payload and receiver storage, confirm no synthetic secret strings leak, verify offline/retry/duplicate behavior, and exercise auth, retention and deletion. Then run a real-device end-to-end test before external distribution.
+- **Current status:** The shared Flutter foundation has an allowlisted diagnostic report model and unit-test fixture with a fake in-memory sink, but **no production sender, Cloudflare endpoint or verified real-device end-to-end reporting**. Leave collection disabled. Neither passing unit tests nor this roadmap note establishes deployment or legal compliance.
+
+**Priority:** Keep focus on finishing, securing and validating the Android apps; only activate centralized diagnostics after explicit review of an individual app's readiness and the privacy/security gates above.
+
 ## iPhone phase, after Android gates pass
 
 - Maintain platform-neutral Flutter logic and avoid Android-only dependencies without an iOS alternative; assess plugins and permissions individually.
