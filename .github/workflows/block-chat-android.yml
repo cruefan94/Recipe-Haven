@@ -1,0 +1,132 @@
+name: Block Chat — Android Source, Security, and Test APK
+on:
+  push:
+    branches:
+      - feature/block-chat-android-20261122
+    paths:
+      - examples/block_chat/**
+      - scripts/bootstrap_block_chat_android.sh
+      - .github/workflows/block-chat-android.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: block-chat-android-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  database-rls:
+    name: PostgreSQL invitation and access controls
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: integration-test
+          POSTGRES_DB: blockchat
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d blockchat"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate RLS, invites, chat and moderation against PostgreSQL
+        env:
+          PGPASSWORD: integration-test
+        run: |
+          set -euo pipefail
+          psql -h localhost -U postgres -d blockchat -v ON_ERROR_STOP=1 \
+            -f examples/block_chat/supabase/test/security_smoke.sql
+
+  android:
+    name: Flutter Android validation and optional configured APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    needs: database-rls
+    env:
+      BLOCK_CHAT_SUPABASE_URL: ${{ secrets.BLOCK_CHAT_SUPABASE_URL }}
+      BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Analyze and test Block Chat app
+        run: |
+          set -euo pipefail
+          cd examples/block_chat
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Bootstrap distinct Android application
+        run: bash scripts/bootstrap_block_chat_android.sh
+      - name: Compile check without deploying fake credentials
+        run: |
+          set -euo pipefail
+          cd examples/block_chat
+          flutter build apk --release \
+            --dart-define=BLOCK_CHAT_SUPABASE_URL=https://invalid.example \
+            --dart-define=BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY=compile-only
+          echo 'Android compilation passed. The compile-check APK is NOT distributed.'
+      - name: Detect configured backend without exposing configuration
+        run: |
+          if [[ -n "$BLOCK_CHAT_SUPABASE_URL" && -n "$BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY" ]]; then
+            echo "BACKEND_CONFIGURED=true" >> "$GITHUB_ENV"
+          else
+            echo "BACKEND_CONFIGURED=false" >> "$GITHUB_ENV"
+            echo "::notice::Supabase project must be configured before an installable Block Chat APK is distributed."
+          fi
+      - name: Verify backend URL and database schema are reachable
+        if: env.BACKEND_CONFIGURED == 'true'
+        run: |
+          set -euo pipefail
+          [[ "$BLOCK_CHAT_SUPABASE_URL" == https://* ]] || exit 1
+          # The Block tables intentionally forbid unauthenticated reads.
+          # Check only the constant, non-sensitive, anonymous health RPC.
+          url="${BLOCK_CHAT_SUPABASE_URL%/}/rest/v1/rpc/block_chat_health"
+          status="$(curl --silent --show-error --output "$RUNNER_TEMP/block-chat-health-response" \
+            --write-out '%{http_code}' --max-time 18 --request POST \
+            --header "Content-Type: application/json" \
+            --header "apikey: $BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY" \
+            --data '{}' "$url")"
+          if [[ "$status" != '200' ]] || \
+             [[ "$(cat "$RUNNER_TEMP/block-chat-health-response")" != '"block-chat-v3"' ]]; then
+            echo "::error::Block Chat backend is unavailable or migrations 0001-0003 are incomplete (HTTP $status)."
+            exit 1
+          fi
+      - name: Build backend-configured Android test APK
+        if: env.BACKEND_CONFIGURED == 'true'
+        run: |
+          set -euo pipefail
+          cd examples/block_chat
+          flutter build apk --release --build-name=0.1.0 --build-number=$((70000+GITHUB_RUN_NUMBER)) \
+            --dart-define="BLOCK_CHAT_SUPABASE_URL=$BLOCK_CHAT_SUPABASE_URL" \
+            --dart-define="BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY=$BLOCK_CHAT_SUPABASE_PUBLISHABLE_KEY"
+      - name: Verify identity and signature, prepare artifact
+        if: env.BACKEND_CONFIGURED == 'true'
+        run: |
+          set -euo pipefail
+          apk=examples/block_chat/build/app/outputs/flutter-apk/app-release.apk
+          test -s "$apk"
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          aapt="$(find "$sdk/build-tools" -type f -name aapt | sort -V | tail -1)"
+          signer="$(find "$sdk/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -n "$aapt" && test -n "$signer"
+          "$signer" verify --verbose --print-certs "$apk"
+          "$aapt" dump badging "$apk" | grep "^package: name='com.cruefan94.block_chat'"
+          mkdir -p release-test
+          cp "$apk" release-test/Block-Chat-Android-TEST.apk
+          (cd release-test && sha256sum Block-Chat-Android-TEST.apk > Block-Chat-Android-TEST.sha256)
+      - name: Upload configured test APK (temporary signing, fresh-install only)
+        if: env.BACKEND_CONFIGURED == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Block-Chat-Android-TEST
+          path: release-test/
+          if-no-files-found: error
+          retention-days: 30
